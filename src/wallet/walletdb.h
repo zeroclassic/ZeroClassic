@@ -134,7 +134,7 @@ public:
     bool ErasePurpose(const std::string& strAddress);
 
     //Begin Historical Wallet Tx
-    bool WriteArcTx(uint256 hash, ArchiveTxPoint arcTxPoint);
+    bool WriteArcTx(const CWalletTx& wtx);
     bool EraseArcTx(uint256 hash);
     bool WriteArcSproutOp(uint256 nullifier, JSOutPoint op);
     bool EraseArcSproutOp(uint256 nullifier);
@@ -142,7 +142,7 @@ public:
     bool EraseArcSaplingOp(uint256 nullifier);
     //End Historical Wallet Tx
 
-    bool WriteTx(uint256 hash, const CWalletTx& wtx);
+    bool WriteTx(const CWalletTx& wtx);
     bool EraseTx(uint256 hash);
 
     bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey, const CKeyMetadata &keyMeta);
