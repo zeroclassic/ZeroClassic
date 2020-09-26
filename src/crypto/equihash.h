@@ -26,8 +26,8 @@ void ExpandArray(const unsigned char* in, size_t in_len,
                  size_t bit_len, size_t byte_pad=0);
 void EhIndexToArray(const eh_index i, unsigned char* array);
 
-
-#ifdef ENABLE_MINING
+// Always, because of "old way" equihash verification 
+//#ifdef ENABLE_MINING
 
 #include "crypto/sha256.h"
 #include "utilstrencodings.h"
@@ -296,7 +296,7 @@ inline bool EhOptimisedSolveUncancellable(unsigned int n, unsigned int k, const 
     return EhOptimisedSolve(n, k, base_state, validBlock,
                             [](EhSolverCancelCheck pos) { return false; });
 }
-#endif // ENABLE_MINING
+//#endif // ENABLE_MINING
 
 #define EhIsValidSolution(n, k, base_state, soln, ret)   \
     if (n == 96 && k == 3) {                             \
