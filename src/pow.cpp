@@ -109,7 +109,9 @@ bool CheckEquihashSolution(const CBlockHeader *pblock, const Consensus::Params& 
 
     // Hash state
     eh_HashState state;
-    EhInitialiseState(n, k, state);
+    //EhInitialiseState(n, k, state);
+    EhInitialiseStatePers(n, k, state, "ZcashPoW");
+    
 
     // I = the block header minus nonce and solution.
     CEquihashInput I{*pblock};

@@ -213,6 +213,7 @@ public:
     Equihash() { }
 
     void InitialiseState(eh_HashState& base_state);
+    void InitialiseStatePers(eh_HashState& base_state, const char pers[8]);
     bool BasicSolve(const eh_HashState& base_state,
                     const std::function<bool(std::vector<unsigned char>)> validBlock,
                     const std::function<bool(EhSolverCancelCheck)> cancelled);
@@ -241,6 +242,21 @@ static Equihash<192,7> Eh192_7;
         Eh48_5.InitialiseState(base_state);  \
     } else if (n == 192 && k == 7) {         \
         Eh192_7.InitialiseState(base_state); \
+    } else {                                 \
+        throw std::invalid_argument("Unsupported Equihash parameters"); \
+    }
+
+#define EhInitialiseStatePers(n, k, base_state, pers)  \
+    if (n == 96 && k == 3) {                 \
+        Eh96_3.InitialiseStatePers(base_state, pers);  \
+    } else if (n == 200 && k == 9) {         \
+        Eh200_9.InitialiseStatePers(base_state, pers); \
+    } else if (n == 96 && k == 5) {          \
+        Eh96_5.InitialiseStatePers(base_state, pers);  \
+    } else if (n == 48 && k == 5) {          \
+        Eh48_5.InitialiseStatePers(base_state, pers);  \
+    } else if (n == 192 && k == 7) {         \
+        Eh192_7.InitialiseStatePers(base_state, pers); \
     } else {                                 \
         throw std::invalid_argument("Unsupported Equihash parameters"); \
     }

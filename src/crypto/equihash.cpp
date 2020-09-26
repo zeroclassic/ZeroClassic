@@ -166,6 +166,18 @@ void Equihash<N,K>::InitialiseState(eh_HashState& base_state)
     base_state = eh_HashState((512/N)*N/8, personalization);
 }
 
+template<unsigned int N, unsigned int K>
+void Equihash<N,K>::InitialiseStatePers(eh_HashState& base_state, const char pers[8])
+{
+    uint32_t le_N = htole32(N);
+    uint32_t le_K = htole32(K);
+    unsigned char personalization[BLAKE2bPersonalBytes] = {};
+    memcpy(personalization, pers, 8);
+    memcpy(personalization+8,  &le_N, 4);
+    memcpy(personalization+12, &le_K, 4);
+    base_state = eh_HashState((512/N)*N/8, personalization);
+}
+
 void GenerateHash(const eh_HashState& base_state, eh_index g,
                   unsigned char* hash, size_t hLen)
 {
@@ -823,6 +835,12 @@ bool Equihash<N,K>::IsValidSolution(const eh_HashState& base_state, std::vector<
     assert(X.size() == 1);
     return X[0].IsZero(hashLen);
 }
+
+template void Equihash<96,3>::InitialiseStatePers(eh_HashState& base_state, const char *pers);
+template void Equihash<200,9>::InitialiseStatePers(eh_HashState& base_state, const char *pers);
+template void Equihash<96,5>::InitialiseStatePers(eh_HashState& base_state, const char *pers);
+template void Equihash<48,5>::InitialiseStatePers(eh_HashState& base_state, const char *pers);
+template void Equihash<192,7>::InitialiseStatePers(eh_HashState& base_state, const char *pers);
 
 template bool Equihash<96,3>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln);
 template bool Equihash<200,9>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln);
