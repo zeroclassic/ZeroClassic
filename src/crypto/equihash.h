@@ -266,6 +266,21 @@ static Equihash<144,5> Eh144_5;
         throw std::invalid_argument("Unsupported Equihash parameters"); \
     }
 
+#define EhInitialiseStatePers(n, k, base_state, pers)  \
+    if (n == 96 && k == 3) {                 \
+        Eh96_3.InitialiseStatePers(base_state, pers);  \
+    } else if (n == 200 && k == 9) {         \
+        Eh200_9.InitialiseStatePers(base_state, pers); \
+    } else if (n == 96 && k == 5) {          \
+        Eh96_5.InitialiseStatePers(base_state, pers);  \
+    } else if (n == 48 && k == 5) {          \
+        Eh48_5.InitialiseStatePers(base_state, pers);  \
+    } else if (n == 192 && k == 7) {         \
+        Eh192_7.InitialiseStatePers(base_state, pers); \
+    } else {                                 \
+        throw std::invalid_argument("Unsupported Equihash parameters"); \
+    }
+
 inline bool EhBasicSolve(unsigned int n, unsigned int k, const eh_HashState& base_state,
                     const std::function<bool(std::vector<unsigned char>)> validBlock,
                     const std::function<bool(EhSolverCancelCheck)> cancelled)
