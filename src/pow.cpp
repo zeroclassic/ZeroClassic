@@ -107,17 +107,43 @@ bool CheckEquihashSolution(const CBlockHeader *pblock, const Consensus::Params& 
     unsigned int n = params.nEquihashN;
     unsigned int k = params.nEquihashK;
 
+    // Hash state
+    crypto_generichash_blake2b_state state;
+    EhInitialiseState(n, k, state);
+
     // I = the block header minus nonce and solution.
     CEquihashInput I{*pblock};
     // I||V
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << I;
 
+    // not going to use librustzcash equihash solution validation, needs changes in rust
+    /*
     return librustzcash_eh_isvalid(
         n, k,
         (unsigned char*)&ss[0], ss.size(),
         pblock->nNonce.begin(), pblock->nNonce.size(),
         pblock->nSolution.data(), pblock->nSolution.size());
+    */
+
+    // old way
+    ss << pblock->nNonce;
+
+    // H(I||V||...
+    crypto_generichash_blake2b_update(&state, (unsigned char*)&ss[0], ss.size());
+
+    bool isValid;
+    EhIsValidSolution(n, k, state, pblock->nSolution, isValid);
+    if (!isValid)
+    {
+        return error("CheckEquihashSolution(): invalid solution");
+    }
+        
+
+    return true;
+
+
+
 }
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
@@ -131,7 +157,7 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     // Check range
     if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
         return false;
-
+        
     // Check proof of work matches claimed amount
     if (UintToArith256(hash) > bnTarget)
         return false;

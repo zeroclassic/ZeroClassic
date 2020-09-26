@@ -2642,7 +2642,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck() {
-    RenameThread("zcash-scriptch");
+    RenameThread(strprintf("%s-scriptch", COIN_NICKNAME).c_str());
     scriptcheckqueue.Thread();
 }
 

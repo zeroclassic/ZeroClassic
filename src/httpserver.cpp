@@ -356,7 +356,7 @@ static bool HTTPBindAddresses(struct evhttp* http)
 /** Simple wrapper to set thread name and run work queue */
 static void HTTPWorkQueueRun(WorkQueue<HTTPClosure>* queue)
 {
-    RenameThread("zcash-httpworker");
+    RenameThread(strprintf("%s-httpworker", COIN_NICKNAME).c_str());
     queue->Run();
 }
 

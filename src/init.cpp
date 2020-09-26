@@ -189,7 +189,7 @@ void Shutdown()
     /// for example if the data directory was found to be locked.
     /// Be sure that anything that writes files or flushes caches only does this if the respective
     /// module was initialized.
-    RenameThread("zcash-shutoff");
+    RenameThread(strprintf("%s-shutoff", COIN_NICKNAME).c_str());
     mempool.AddTransactionsUpdated(1);
 
     StopHTTPRPC();
@@ -586,7 +586,7 @@ void CleanupBlockRevFiles()
 
 void ThreadImport(std::vector<fs::path> vImportFiles, const CChainParams& chainparams)
 {
-    RenameThread("zcash-loadblk");
+    RenameThread(strprintf("%s-loadblk", COIN_NICKNAME).c_str());
     // -reindex
     if (fReindex) {
         CImportingNow imp;

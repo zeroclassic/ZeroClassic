@@ -70,7 +70,7 @@ int verifyrec(const BLAKE2bState *ctx, u32 *indices, uchar *hash, int r) {
     return vrf1;
   for (int i=0; i < WN/8; i++)
     hash[i] = hash0[i] ^ hash1[i];
-  int i, b = r * DIGITBITS;
+  int i, b = r < WK ? r * DIGITBITS : WN;
   for (i = 0; i < b/8; i++)
     if (hash[i])
       return POW_NONZERO_XOR;

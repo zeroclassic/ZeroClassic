@@ -765,4 +765,67 @@ template bool Equihash<48,5>::OptimisedSolve(const eh_HashState& base_state,
                                              const std::function<bool(std::vector<unsigned char>)> validBlock,
                                              const std::function<bool(EhSolverCancelCheck)> cancelled);
 
+// Explicit instantiations for Equihash<192,7>
+template int Equihash<192,7>::InitialiseState(eh_HashState& base_state);
+template bool Equihash<192,7>::BasicSolve(const eh_HashState& base_state,
+                                         const std::function<bool(std::vector<unsigned char>)> validBlock,
+                                         const std::function<bool(EhSolverCancelCheck)> cancelled);
+template bool Equihash<192,7>::OptimisedSolve(const eh_HashState& base_state,
+                                             const std::function<bool(std::vector<unsigned char>)> validBlock,
+                                             const std::function<bool(EhSolverCancelCheck)> cancelled);
+
 #endif // ENABLE_MINING
+
+template<unsigned int N, unsigned int K>
+bool Equihash<N,K>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln)
+{
+    if (soln.size() != SolutionWidth) {
+        LogPrint("pow", "Invalid solution length: %d (expected %d)\n",
+                 soln.size(), SolutionWidth);
+        return false;
+    }
+
+    std::vector<FullStepRow<FinalFullWidth>> X;
+    X.reserve(1 << K);
+    unsigned char tmpHash[HashOutput];
+    for (eh_index i : GetIndicesFromMinimal(soln, CollisionBitLength)) {
+        GenerateHash(base_state, i/IndicesPerHashOutput, tmpHash, HashOutput);
+        X.emplace_back(tmpHash+((i % IndicesPerHashOutput) * N/8),
+                       N/8, HashLength, CollisionBitLength, i);
+    }
+
+    size_t hashLen = HashLength;
+    size_t lenIndices = sizeof(eh_index);
+    while (X.size() > 1) {
+        std::vector<FullStepRow<FinalFullWidth>> Xc;
+        for (int i = 0; i < X.size(); i += 2) {
+            if (!HasCollision(X[i], X[i+1], CollisionByteLength)) {
+                LogPrint("pow", "Invalid solution: invalid collision length between StepRows\n");
+                LogPrint("pow", "X[i]   = %s\n", X[i].GetHex(hashLen));
+                LogPrint("pow", "X[i+1] = %s\n", X[i+1].GetHex(hashLen));
+                return false;
+            }
+            if (X[i+1].IndicesBefore(X[i], hashLen, lenIndices)) {
+                LogPrint("pow", "Invalid solution: Index tree incorrectly ordered\n");
+                return false;
+            }
+            if (!DistinctIndices(X[i], X[i+1], hashLen, lenIndices)) {
+                LogPrint("pow", "Invalid solution: duplicate indices\n");
+                return false;
+            }
+            Xc.emplace_back(X[i], X[i+1], hashLen, lenIndices, CollisionByteLength);
+        }
+        X = Xc;
+        hashLen -= CollisionByteLength;
+        lenIndices *= 2;
+    }
+
+    assert(X.size() == 1);
+    return X[0].IsZero(hashLen);
+}
+
+template bool Equihash<96,3>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln);
+template bool Equihash<200,9>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln);
+template bool Equihash<96,5>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln);
+template bool Equihash<48,5>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln);
+template bool Equihash<192,7>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln);

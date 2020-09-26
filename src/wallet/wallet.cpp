@@ -48,7 +48,7 @@ bool bSpendZeroConfChange = DEFAULT_SPEND_ZEROCONF_CHANGE;
 bool fSendFreeTransactions = DEFAULT_SEND_FREE_TRANSACTIONS;
 bool fPayAtLeastCustomFee = true;
 
-const char * DEFAULT_WALLET_DAT = "wallet.dat";
+const char * DEFAULT_WALLET_DAT = RC_COIN_WALLET_FILENAME;
 
 /**
  * Fees smaller than this (in satoshi) are considered zero fee (for transaction creation)

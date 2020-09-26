@@ -14,11 +14,11 @@
 #include "utilmoneystr.h"
 #include "utilstrencodings.h"
 
+#include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/synchronized_value.hpp>
-
-#include <optional>
+#include <boost/algorithm/string.hpp>
 #include <string>
 #ifdef WIN32
 #include <io.h>
@@ -592,7 +592,8 @@ bool enableVTMode()
 void ThreadShowMetricsScreen()
 {
     // Make this thread recognisable as the metrics screen thread
-    RenameThread("zcash-metrics-screen");
+    //RenameThread("zcash-metrics-screen");
+    RenameThread(strprintf("%s-metrics-screen", COIN_NICKNAME).c_str());
 
     // Determine whether we should render a persistent UI or rolling metrics
     bool isTTY = isatty(STDOUT_FILENO);
@@ -612,7 +613,7 @@ void ThreadShowMetricsScreen()
         std::cout << std::endl;
 
         // Thank you text
-        std::cout << strprintf(_("Thank you for running a %s zcashd v%s node!"), WhichNetwork(), FormatVersion(CLIENT_VERSION)) << std::endl;
+        std::cout << strprintf(_("Thank you for running a %s \e[1m%s %s\e[0m node!"), WhichNetwork(), COIN_NAME, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<std::string>())) << std::endl;
         std::cout << _("You're helping to strengthen the network and contributing to a social good :)") << std::endl;
 
         // Privacy notice text
@@ -671,7 +672,7 @@ void ThreadShowMetricsScreen()
             // Explain how to exit
             std::cout << "[";
 #ifdef WIN32
-            std::cout << _("'zcash-cli.exe stop' to exit");
+            std::cout << strprintf(_("'%s.exe stop' to exit"), COIN_CLI_EXECUTABLE.c_str());
 #else
             std::cout << _("Press Ctrl+C to exit");
 #endif

@@ -730,7 +730,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
 {
     LogPrintf("ZcashMiner started\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    RenameThread("zcash-miner");
+    RenameThread(strprintf("%s-miner", COIN_NICKNAME).c_str());
 
     // Each thread has its own counter
     unsigned int nExtraNonce = 0;

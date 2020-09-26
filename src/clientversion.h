@@ -42,6 +42,25 @@
 #define COPYRIGHT_STR "2009-" STRINGIZE(COPYRIGHT_YEAR) " The Bitcoin Core Developers and The Zcash developers"
 
 /**
+ * Additional macros, to ease the pain of (fork | rebase) rebranding
+ */
+#define RC_COIN_NAME "Zcash"
+#define RC_COIN_NICKNAME "zcash"
+#define RC_COIN_CLIENT_NAME "MagicBean"
+#define RC_COIN_DAEMON_EXECUTABLE "zcashd"
+#define RC_COIN_CLI_EXECUTABLE "zcash-cli"
+#define RC_COIN_TX_EXECUTABLE "zcash-tx" 
+#define RC_COIN_WALLET_FILENAME "wallet.dat"
+#define RC_COIN_RPC_PORT_MAINNET 8232
+#define RC_COIN_RPC_PORT_TESTNET 18232
+#define RC_COIN_RPC_PORT_REGTEST 18232
+#define RC_COIN_CURRENCY_UNIT "ZEC"
+#define RC_COIN_MINOR_CURRENCY_UNIT "zatoshis"
+#define RC_APPROX_RELEASE_HEIGHT 957287
+#define RC_MAX_OUTBOUND_CONNECTIONS 8
+
+
+/**
  * bitcoind-res.rc includes this file, but it cannot cope with real c++ code.
  * WINDRES_PREPROC is defined to indicate that its pre-processor is running.
  * Anything other than a define should be guarded below.
@@ -66,6 +85,18 @@ extern const std::string CLIENT_DATE;
 std::string FormatVersion(int nVersion);
 std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
+
+/**
+ * Additional defined macros converted to const strings
+ */
+const std::string COIN_NAME(RC_COIN_NAME);
+const std::string COIN_NICKNAME(RC_COIN_NICKNAME);
+const std::string COIN_DAEMON_EXECUTABLE(RC_COIN_DAEMON_EXECUTABLE);
+const std::string COIN_CLI_EXECUTABLE(RC_COIN_CLI_EXECUTABLE);
+const std::string COIN_TX_EXECUTABLE(RC_COIN_TX_EXECUTABLE);
+const std::string COIN_PID_FILENAME(RC_COIN_DAEMON_EXECUTABLE + std::string(".pid"));
+const std::string COIN_CONF_FILENAME(RC_COIN_NICKNAME + std::string(".conf"));
+
 
 #endif // WINDRES_PREPROC
 
