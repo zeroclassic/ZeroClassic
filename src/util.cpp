@@ -229,7 +229,7 @@ fs::path GetDefaultDataDir()
     // Unix: ~/.zcash
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / fs::path(std::string("." + COIN_NAME));
+    return GetSpecialFolderPath(CSIDL_APPDATA) / fs::path(std::string(COIN_NAME));
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -241,7 +241,7 @@ fs::path GetDefaultDataDir()
     // Mac
     pathRet /= "Library/Application Support";
     TryCreateDirectory(pathRet);
-    return pathRet / fs::path(std::string("." + COIN_NAME));
+    return pathRet / fs::path(std::string(COIN_NAME));
 #else
     // Unix
     return pathRet / fs::path(std::string("." + COIN_NICKNAME));
