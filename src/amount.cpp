@@ -5,6 +5,7 @@
 
 #include "amount.h"
 #include "policy/fees.h"
+#include "clientversion.h"
 
 #include "tinyformat.h"
 
