@@ -6,7 +6,6 @@
 #include "amount.h"
 #include "chainparams.h"
 #include "consensus/consensus.h"
-#include "consensus/funding.h"
 #include "consensus/validation.h"
 #include "core_io.h"
 #ifdef ENABLE_MINING
@@ -424,10 +423,6 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             "It returns data needed to construct a block to work on.\n"
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\n"
 
-            "\nTo obtain information about founder's reward or funding stream\n"
-            "amounts, use 'getblocksubsidy HEIGHT' passing in the height returned\n"
-            "by this API.\n"
-
             "\nArguments:\n"
             "1. \"jsonrequestobject\"       (string, optional) A json object in the following spec\n"
             "     {\n"
@@ -494,7 +489,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Wallet disabled and -mineraddress not set");
         }
 #else
-        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "zcashd compiled without wallet and -mineraddress not set");
+        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "zerod compiled without wallet and -mineraddress not set");
 #endif
     }
 
@@ -725,13 +720,6 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         entry.pushKV("sigops", pblocktemplate->vTxSigOps[index_in_template]);
 
         if (tx.IsCoinBase()) {
-            // Show founders' reward if it is required
-            auto nextHeight = pindexPrev->nHeight+1;
-            bool canopyActive = consensus.NetworkUpgradeActive(nextHeight, Consensus::UPGRADE_CANOPY);
-            if (!canopyActive && nextHeight > 0 && nextHeight <= consensus.GetLastFoundersRewardBlockHeight(nextHeight)) {
-                CAmount nBlockSubsidy = GetBlockSubsidy(nextHeight, consensus);
-                entry.pushKV("foundersreward", nBlockSubsidy / 5);
-            }
             entry.pushKV("required", true);
             txCoinbase = entry;
         } else {
@@ -931,22 +919,13 @@ UniValue getblocksubsidy(const UniValue& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             "getblocksubsidy height\n"
-            "\nReturns block subsidy reward, taking into account the mining slow start and the founders reward, of block at index provided.\n"
+            "\nReturns block subsidy reward of block at index provided.\n"
             "\nArguments:\n"
             "1. height         (numeric, optional) The block height.  If not provided, defaults to the current height of the chain.\n"
             "\nResult:\n"
             "{\n"
             "  \"miner\" : x.xxx,              (numeric) The mining reward amount in " + CURRENCY_UNIT + ".\n"
             "  \"founders\" : x.xxx,           (numeric) The founders' reward amount in " + CURRENCY_UNIT + ".\n"
-            "  \"fundingstreams\" : [          (array) An array of funding stream descriptions (present only when Canopy has activated).\n"
-            "    {\n"
-            "      \"recipient\" : \"...\",        (string) A description of the funding stream recipient.\n"
-            "      \"specification\" : \"url\",    (string) A URL for the specification of this funding stream.\n"
-            "      \"value\" : x.xxx             (numeric) The funding stream amount in " + CURRENCY_UNIT + ".\n"
-            "      \"valueZat\" : xxxx           (numeric) The funding stream amount in " + MINOR_CURRENCY_UNIT + ".\n"
-            "      \"address\" :                 (string) The transparent or Sapling address of the funding stream recipient.\n"
-            "    }, ...\n"
-            "  ]\n"
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getblocksubsidy", "1000")
@@ -962,52 +941,9 @@ UniValue getblocksubsidy(const UniValue& params, bool fHelp)
     CAmount nBlockSubsidy = GetBlockSubsidy(nHeight, consensus);
     CAmount nMinerReward = nBlockSubsidy;
     CAmount nFoundersReward = 0;
-    bool canopyActive = consensus.NetworkUpgradeActive(nHeight, Consensus::UPGRADE_CANOPY);
 
     UniValue result(UniValue::VOBJ);
-    if (canopyActive) {
-        KeyIO keyIO(Params());
-        UniValue fundingstreams(UniValue::VARR);
-        auto fsinfos = Consensus::GetActiveFundingStreams(nHeight, consensus);
-        for (int idx = 0; idx < fsinfos.size(); idx++) {
-            const auto& fsinfo = fsinfos[idx];
-            CAmount nStreamAmount = fsinfo.Value(nBlockSubsidy);
-            nMinerReward -= nStreamAmount;
 
-            UniValue fsobj(UniValue::VOBJ);
-            fsobj.pushKV("recipient", fsinfo.recipient);
-            fsobj.pushKV("specification", fsinfo.specification);
-            fsobj.pushKV("value", ValueFromAmount(nStreamAmount));
-            fsobj.pushKV("valueZat", nStreamAmount);
-
-            auto fs = consensus.vFundingStreams[idx];
-            auto address = fs.value().RecipientAddress(consensus, nHeight);
-
-            CScript* outpoint = std::get_if<CScript>(&address);
-            std::string addressStr;
-
-            if (outpoint != nullptr) {
-                // For transparent funding stream addresses
-                UniValue pubkey(UniValue::VOBJ);
-                ScriptPubKeyToUniv(*outpoint, pubkey, true);
-                addressStr = find_value(pubkey, "addresses").get_array()[0].get_str();
-
-            } else {
-                libzcash::SaplingPaymentAddress* zaddr = std::get_if<libzcash::SaplingPaymentAddress>(&address);
-                if (zaddr != nullptr) {
-                    // For shielded funding stream addresses
-                    addressStr = keyIO.EncodePaymentAddress(*zaddr);
-                }
-            }
-
-            fsobj.pushKV("address", addressStr);
-            fundingstreams.push_back(fsobj);
-        }
-        result.pushKV("fundingstreams", fundingstreams);
-    } else if (nHeight > 0 && nHeight <= consensus.GetLastFoundersRewardBlockHeight(nHeight)) {
-        nFoundersReward = nBlockSubsidy/5;
-        nMinerReward -= nFoundersReward;
-    }
     result.pushKV("miner", ValueFromAmount(nMinerReward));
     result.pushKV("founders", ValueFromAmount(nFoundersReward));
     return result;

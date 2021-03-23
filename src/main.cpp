@@ -13,7 +13,6 @@
 #include "checkpoints.h"
 #include "checkqueue.h"
 #include "consensus/consensus.h"
-#include "consensus/funding.h"
 #include "consensus/upgrades.h"
 #include "consensus/validation.h"
 #include "deprecation.h"
@@ -916,15 +915,6 @@ bool ContextualCheckTransaction(
                 REJECT_INVALID, "bad-txns-oversize");
     }
 
-    // From Canopy onward, coinbase transaction must include outputs corresponding to the
-    // ZIP 207 consensus funding streams active at the current block height. To avoid
-    // double-decrypting, we detect any shielded funding streams during the Heartwood
-    // consensus check. If Canopy is not yet active, fundingStreamElements will be empty.
-    std::set<Consensus::FundingStreamElement> fundingStreamElements = Consensus::GetActiveFundingStreamElements(
-        nHeight,
-        GetBlockSubsidy(nHeight, chainparams.GetConsensus()),
-        chainparams.GetConsensus());
-
     // Rules that apply to Heartwood and later:
     if (heartwoodActive) {
         if (tx.IsCoinBase()) {
@@ -959,22 +949,9 @@ bool ContextualCheckTransaction(
                         REJECT_INVALID, "bad-cb-output-desc-invalid-encct");
                 }
 
-                // ZIP 207: detect shielded funding stream elements
-                if (canopyActive) {
-                    libzcash::SaplingPaymentAddress zaddr(encPlaintext->d, outPlaintext->pk_d);
-                    for (auto it = fundingStreamElements.begin(); it != fundingStreamElements.end(); ++it) {
-                        const libzcash::SaplingPaymentAddress* streamAddr = std::get_if<libzcash::SaplingPaymentAddress>(&(it->first));
-                        if (streamAddr && zaddr == *streamAddr && encPlaintext->value() == it->second) {
-                            fundingStreamElements.erase(it);
-                            break;
-                        }
-                    }
-                }
-
                 // ZIP 212: after ZIP 212 any Sapling output of a coinbase tx that is
                 // decrypted to a note plaintext, MUST have note plaintext lead byte equal
-                // to 0x02. This applies even during the grace period, and also applies to
-                // funding stream outputs sent to shielded payment addresses, if any.
+                // to 0x02. This applies even during the grace period.
                 // https://zips.z.cash/zip-0212#consensus-rule-change-for-coinbase-transactions
                 if (canopyActive != (encPlaintext->get_leadbyte() == 0x02)) {
                     return state.DoS(
@@ -1009,23 +986,6 @@ bool ContextualCheckTransaction(
             }
         }
 
-        if (tx.IsCoinBase()) {
-            // Detect transparent funding streams.
-            for (const CTxOut& output : tx.vout) {
-                for (auto it = fundingStreamElements.begin(); it != fundingStreamElements.end(); ++it) {
-                    const CScript* taddr = std::get_if<CScript>(&(it->first));
-                    if (taddr && output.scriptPubKey == *taddr && output.nValue == it->second) {
-                        fundingStreamElements.erase(it);
-                        break;
-                    }
-                }
-            }
-
-            if (!fundingStreamElements.empty()) {
-                return state.DoS(100, error("ContextualCheckTransaction(): funding stream missing at height %d", nHeight),
-                                 REJECT_INVALID, "cb-funding-stream-missing");
-            }
-        }
     } else {
         // Rules that apply generally before Canopy. These were
         // previously noncontextual checks that became contextual
@@ -1889,41 +1849,9 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    CAmount nSubsidy = 12.5 * COIN;
+    CAmount nSubsidy = 10 * COIN;
 
-    // Mining slow start
-    // The subsidy is ramped up linearly, skipping the middle payout of
-    // MAX_SUBSIDY/2 to keep the monetary curve consistent with no slow start.
-    if (nHeight < consensusParams.SubsidySlowStartShift()) {
-        nSubsidy /= consensusParams.nSubsidySlowStartInterval;
-        nSubsidy *= nHeight;
-        return nSubsidy;
-    } else if (nHeight < consensusParams.nSubsidySlowStartInterval) {
-        nSubsidy /= consensusParams.nSubsidySlowStartInterval;
-        nSubsidy *= (nHeight+1);
-        return nSubsidy;
-    }
-
-    assert(nHeight >= consensusParams.SubsidySlowStartShift());
-
-    int halvings = consensusParams.Halving(nHeight);
-
-    // Force block reward to zero when right shift is undefined.
-    if (halvings >= 64)
-        return 0;
-
-    // zip208
-    // BlockSubsidy(height) :=
-    // SlowStartRate · height, if height < SlowStartInterval / 2
-    // SlowStartRate · (height + 1), if SlowStartInterval / 2 ≤ height and height < SlowStartInterval
-    // floor(MaxBlockSubsidy / 2^Halving(height)), if SlowStartInterval ≤ height and not IsBlossomActivated(height)
-    // floor(MaxBlockSubsidy / (BlossomPoWTargetSpacingRatio · 2^Halving(height))), otherwise
-    if (consensusParams.NetworkUpgradeActive(nHeight, Consensus::UPGRADE_BLOSSOM)) {
-        return (nSubsidy / Consensus::BLOSSOM_POW_TARGET_SPACING_RATIO) >> halvings;
-    } else {
-        // Subsidy is cut in half every 840,000 blocks which will occur approximately every 4 years.
-        return nSubsidy >> halvings;
-    }
+    return nSubsidy;
 }
 
 bool IsInitialBlockDownload(const Consensus::Params& params)
@@ -4170,35 +4098,6 @@ bool ContextualCheckBlock(
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin())) {
             return state.DoS(100, error("%s: block height mismatch in coinbase", __func__),
                              REJECT_INVALID, "bad-cb-height");
-        }
-    }
-
-    if (consensusParams.NetworkUpgradeActive(nHeight, Consensus::UPGRADE_CANOPY)) {
-        // Funding streams are checked inside ContextualCheckTransaction.
-        // This empty conditional branch exists to enforce this ZIP 207 consensus rule:
-        //
-        //     Once the Canopy network upgrade activates, the existing consensus rule for
-        //     payment of the Founders' Reward is no longer active.
-    } else if ((nHeight > 0) && (nHeight <= consensusParams.GetLastFoundersRewardBlockHeight(nHeight))) {
-        // Coinbase transaction must include an output sending 20% of
-        // the block subsidy to a Founders' Reward script, until the last Founders'
-        // Reward block is reached, with exception of the genesis block.
-        // The last Founders' Reward block is defined as the block just before the
-        // first subsidy halving block, which occurs at halving_interval + slow_start_shift.
-        bool found = false;
-
-        for (const CTxOut& output : block.vtx[0].vout) {
-            if (output.scriptPubKey == chainparams.GetFoundersRewardScriptAtHeight(nHeight)) {
-                if (output.nValue == (GetBlockSubsidy(nHeight, consensusParams) / 5)) {
-                    found = true;
-                    break;
-                }
-            }
-        }
-
-        if (!found) {
-            return state.DoS(100, error("%s: founders reward missing", __func__),
-                             REJECT_INVALID, "cb-no-founders-reward");
         }
     }
 
@@ -6949,9 +6848,7 @@ CMutableTransaction CreateNewContextualCMutableTransaction(const Consensus::Para
             mtx.nVersion = OVERWINTER_TX_VERSION;
         }
 
-        bool blossomActive = consensusParams.NetworkUpgradeActive(nHeight, Consensus::UPGRADE_BLOSSOM);
-        unsigned int defaultExpiryDelta = blossomActive ? DEFAULT_POST_BLOSSOM_TX_EXPIRY_DELTA : DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA;
-        mtx.nExpiryHeight = nHeight + (expiryDeltaArg ? expiryDeltaArg.value() : defaultExpiryDelta);
+        mtx.nExpiryHeight = nHeight + (expiryDeltaArg ? expiryDeltaArg.value() : DEFAULT_TX_EXPIRY_DELTA);
 
         // mtx.nExpiryHeight == 0 is valid for coinbase transactions
         if (mtx.nExpiryHeight <= 0 || mtx.nExpiryHeight >= TX_EXPIRY_HEIGHT_THRESHOLD) {

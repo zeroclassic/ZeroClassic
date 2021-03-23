@@ -13,10 +13,7 @@
 // release block height. A warning is shown during the 14 days' worth of blocks prior to shut down.
 static const int APPROX_RELEASE_HEIGHT = RC_APPROX_RELEASE_HEIGHT;
 static const int RELEASE_TO_DEPRECATION_WEEKS = 52;
-static const int EXPECTED_BLOCKS_PER_HOUR = 3600 / Consensus::POST_BLOSSOM_POW_TARGET_SPACING;
-
-// Assertions in deprecation calculation? Let's not make a nuclear physics of this simple calculus 
-// static_assert(EXPECTED_BLOCKS_PER_HOUR == 48, "The value of Consensus::POST_BLOSSOM_POW_TARGET_SPACING was chosen such that this assertion holds.");
+static const int EXPECTED_BLOCKS_PER_HOUR = 3600 / Consensus::POW_TARGET_SPACING;
 
 static const int ACTIVATION_TO_DEPRECATION_BLOCKS = (RELEASE_TO_DEPRECATION_WEEKS * 7 * 24 * EXPECTED_BLOCKS_PER_HOUR);
 static const int DEPRECATION_HEIGHT = APPROX_RELEASE_HEIGHT + ACTIVATION_TO_DEPRECATION_BLOCKS;

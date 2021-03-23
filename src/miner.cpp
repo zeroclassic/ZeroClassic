@@ -11,7 +11,6 @@
 #include "amount.h"
 #include "chainparams.h"
 #include "consensus/consensus.h"
-#include "consensus/funding.h"
 #include "consensus/upgrades.h"
 #include "consensus/validation.h"
 #ifdef ENABLE_MINING
@@ -122,42 +121,6 @@ bool IsShieldedMinerAddress(const MinerAddress& minerAddr) {
         std::holds_alternative<boost::shared_ptr<CReserveScript>>(minerAddr));
 }
 
-class AddFundingStreamValueToTx
-{
-private:
-    CMutableTransaction &mtx;
-    void* ctx; 
-    const CAmount fundingStreamValue;
-    const libzcash::Zip212Enabled zip212Enabled;
-public:
-    AddFundingStreamValueToTx(
-            CMutableTransaction &mtx, 
-            void* ctx, 
-            const CAmount fundingStreamValue,
-            const libzcash::Zip212Enabled zip212Enabled): mtx(mtx), ctx(ctx), fundingStreamValue(fundingStreamValue), zip212Enabled(zip212Enabled) {}
-
-    bool operator()(const libzcash::SaplingPaymentAddress& pa) const {
-        uint256 ovk;
-        auto note = libzcash::SaplingNote(pa, fundingStreamValue, zip212Enabled);
-        auto output = OutputDescriptionInfo(ovk, note, NO_MEMO);
-
-        auto odesc = output.Build(ctx);
-        if (odesc) {
-            mtx.vShieldedOutput.push_back(odesc.value());
-            mtx.valueBalance -= fundingStreamValue;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    bool operator()(const CScript& scriptPubKey) const {
-        mtx.vout.push_back(CTxOut(fundingStreamValue, scriptPubKey));
-        return true;
-    }
-};
-
-
 class AddOutputsToCoinbaseTxAndSign
 {
 private:
@@ -181,37 +144,9 @@ public:
         }
     }
 
-    CAmount SetFoundersRewardAndGetMinerValue(void* ctx) const {
+    CAmount GetMinerValue(void* ctx) const {
         auto block_subsidy = GetBlockSubsidy(nHeight, chainparams.GetConsensus());
-        auto miner_reward = block_subsidy; // founders' reward or funding stream amounts will be subtracted below
-
-        if (nHeight > 0) {
-            if (chainparams.GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_CANOPY)) {
-                auto fundingStreamElements = Consensus::GetActiveFundingStreamElements(
-                    nHeight,
-                    block_subsidy,
-                    chainparams.GetConsensus());
-
-                for (Consensus::FundingStreamElement fselem : fundingStreamElements) {
-                    miner_reward -= fselem.second;
-                    bool added = std::visit(AddFundingStreamValueToTx(mtx, ctx, fselem.second, GetZip212Flag()), fselem.first);
-                    if (!added) {
-                        librustzcash_sapling_proving_ctx_free(ctx);
-                        throw new std::runtime_error("Failed to add funding stream output.");
-                    }
-                }
-            } else if (nHeight <= chainparams.GetConsensus().GetLastFoundersRewardBlockHeight(nHeight)) {
-                // Founders reward is 20% of the block subsidy
-                auto vFoundersReward = miner_reward / 5;
-                // Take some reward away from us
-                miner_reward -= vFoundersReward;
-                // And give it to the founders
-                mtx.vout.push_back(CTxOut(vFoundersReward, chainparams.GetFoundersRewardScriptAtHeight(nHeight)));
-            } else {
-                // Founders reward ends without replacement if Canopy is not activated by the
-                // last Founders' Reward block height + 1.
-            }
-        }
+        auto miner_reward = block_subsidy; 
 
         return miner_reward + nFees;
     }
@@ -247,7 +182,7 @@ public:
     void operator()(const libzcash::SaplingPaymentAddress &pa) const {
         auto ctx = librustzcash_sapling_proving_ctx_init();
 
-        auto miner_reward = SetFoundersRewardAndGetMinerValue(ctx);
+        auto miner_reward = GetMinerValue(ctx);
         mtx.valueBalance -= miner_reward;
 
         uint256 ovk;
@@ -272,10 +207,9 @@ public:
         // Add the FR output and fetch the miner's output value.
         auto ctx = librustzcash_sapling_proving_ctx_init();
 
-        // Miner output will be vout[0]; Founders' Reward & funding stream outputs
-        // will follow.
+        // Miner output will be vout[0];
         mtx.vout.resize(1);
-        auto value = SetFoundersRewardAndGetMinerValue(ctx);
+        auto value = GetMinerValue(ctx);
 
         // Now fill in the miner's output.
         mtx.vout[0] = CTxOut(value, coinbaseScript->reserveScript);
