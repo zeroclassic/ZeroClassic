@@ -244,7 +244,7 @@ fs::path GetDefaultDataDir()
     return pathRet / fs::path(std::string(COIN_NAME));
 #else
     // Unix
-    return pathRet / fs::path(std::string("." + COIN_NICKNAME));
+    return pathRet / fs::path(std::string("." + COIN_NAME_LOWERCASE));
 #endif
 #endif
 }
