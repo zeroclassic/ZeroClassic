@@ -2,10 +2,10 @@
 *.deb
 *.exe
 src/bitcoin
-src/zcashd
-src/zcash-cli
-src/zcash-gtest
-src/zcash-tx
+src/zerod
+src/zero-cli
+src/zero-gtest
+src/zero-tx
 src/test/test_bitcoin
 zcutil/bin/
 
