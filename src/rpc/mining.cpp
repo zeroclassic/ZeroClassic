@@ -547,10 +547,10 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
     if (Params().NetworkIDString() != "regtest" && vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Zcash is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, strprintf("%s is not connected!", COIN_NAME));
 
     if (IsInitialBlockDownload(Params().GetConsensus()))
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Zcash is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, strprintf("%s is downloading blocks...", COIN_NAME));
 
 
     MinerAddress minerAddress;
