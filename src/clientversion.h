@@ -47,11 +47,11 @@
 #define RC_COIN_NAME "ZeroClassic"
 #define RC_COIN_NAME_LOWERCASE "zeroclassic"
 #define RC_COIN_NICKNAME "zero"
-#define RC_COIN_CLIENT_NAME "Hayabusa"
+#define RC_COIN_CLIENT_NAME "Taipan"
 #define RC_COIN_DAEMON_EXECUTABLE "zerod"
 #define RC_COIN_CLI_EXECUTABLE "zero-cli"
 #define RC_COIN_TX_EXECUTABLE "zero-tx" 
-#define RC_COIN_WALLET_FILENAME "wallet.dat"
+#define RC_COIN_WALLET_FILENAME "wallet.zero"
 #define RC_COIN_RPC_PORT_MAINNET 23901
 #define RC_COIN_RPC_PORT_TESTNET 23902
 #define RC_COIN_RPC_PORT_REGTEST 23903
