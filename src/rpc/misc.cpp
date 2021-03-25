@@ -42,6 +42,9 @@ using namespace std;
  *
  * Or alternatively, create a specific query method for the information.
  **/
+ 
+extern int32_t longestchain();
+
 UniValue getinfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -61,6 +64,9 @@ UniValue getinfo(const UniValue& params, bool fHelp)
             "  \"difficulty\": xxxxxx,       (numeric) the current difficulty\n"
             "  \"testnet\": true|false,      (boolean) if the server is using testnet or not\n"
             "  \"keypoololdest\": xxxxxx,    (numeric) the timestamp (seconds since GMT epoch) of the oldest pre-generated key in the key pool\n"
+            "  \"p2pport\": xxxxxx,          (numeric) P2P port\n"
+            "  \"rpcport\": xxxxxx,          (numeric) RPC port\n"
+            "  \"longestchain\": xxxxxx,     (numeric) longest chain\n"
             "  \"keypoolsize\": xxxx,        (numeric) how many new keys are pre-generated\n"
             "  \"unlocked_until\": ttt,      (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) that the wallet is unlocked for transfers, or 0 if the wallet is locked\n"
             "  \"paytxfee\": x.xxxx,         (numeric) the transaction fee set in " + CURRENCY_UNIT + "/kB\n"
@@ -98,6 +104,11 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     obj.pushKV("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : string()));
     obj.pushKV("difficulty",    (double)GetDifficulty());
     obj.pushKV("testnet",       Params().TestnetToBeDeprecatedFieldRPC());
+
+    obj.pushKV("p2pport",       GetListenPort());
+    obj.pushKV("rpcport",       GetArg("-rpcport", BaseParams().RPCPort()));
+    obj.pushKV("longestchain",  longestchain());
+
 #ifdef ENABLE_WALLET
     if (pwalletMain) {
         obj.pushKV("keypoololdest", pwalletMain->GetOldestKeyPoolTime());

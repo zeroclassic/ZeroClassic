@@ -552,6 +552,56 @@ UniValue listaddressgroupings(const UniValue& params, bool fHelp)
     return jsonGroupings;
 }
 
+UniValue getaddresses(const UniValue& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return NullUniValue;
+
+    if (fHelp || params.size() > 1)
+        throw runtime_error(
+            "getaddresses (include_watch_only)\n"
+            "\nLists transparent addresses in wallet, including change and (optionally) watch only\n"
+            "\nResult:\n"
+            "[\n"
+            "  {\n"
+            "    \"address\": address,     (string) The ZeroClassic address\n"
+            "    \"is_change\": true,      (boolean) True if current address is change address\n"
+            "    \"is_watch_only\": false  (boolean) True if current address funds are not spendable\n"
+            "    \"balance\": balance      (numeric) Address balance\n"
+            "  },\n"
+            "  ...\n"
+            "]\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getaddresses", "1")
+            + HelpExampleRpc("getaddresses", "params")
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    
+    KeyIO keyIO(Params());
+	bool include_watch_only = (params.size() == 1 && params[0].get_str() == "1");
+	
+    UniValue uv_result(UniValue::VARR);
+    std::map<CTxDestination, CAmount> balances = pwalletMain->GetAddressBalances();
+    for (const CTxDestination address : pwalletMain->GetAddresses(include_watch_only))
+    {
+        UniValue address_item(UniValue::VOBJ);
+       
+        address_item.pushKV("address", keyIO.EncodeDestination(address));
+        
+        bool is_change = !pwalletMain->mapAddressBook.count(address);
+        address_item.pushKV("is_change", is_change);
+        
+        bool is_watch_only = ::IsMine(*pwalletMain, address) & ISMINE_WATCH_ONLY;
+        address_item.pushKV("is_watch_only", is_watch_only);
+        
+        address_item.pushKV("balance", ValueFromAmount(balances[address]));
+        
+        uv_result.push_back(address_item);
+    }
+    return uv_result;
+}
+
 UniValue signmessage(const UniValue& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))
@@ -5200,6 +5250,7 @@ UniValue z_getnotescount(const UniValue& params, bool fHelp)
 }
 
 extern UniValue dumpprivkey(const UniValue& params, bool fHelp); // in rpcdump.cpp
+extern UniValue rescanblockchain(const UniValue& params, bool fHelp);
 extern UniValue importprivkey(const UniValue& params, bool fHelp);
 extern UniValue importaddress(const UniValue& params, bool fHelp);
 extern UniValue importpubkey(const UniValue& params, bool fHelp);
@@ -5207,6 +5258,7 @@ extern UniValue dumpwallet(const UniValue& params, bool fHelp);
 extern UniValue importwallet(const UniValue& params, bool fHelp);
 extern UniValue z_exportkey(const UniValue& params, bool fHelp);
 extern UniValue z_importkey(const UniValue& params, bool fHelp);
+extern UniValue getrescaninfo(const UniValue& params, bool fHelp);
 extern UniValue z_exportviewingkey(const UniValue& params, bool fHelp);
 extern UniValue z_importviewingkey(const UniValue& params, bool fHelp);
 extern UniValue z_exportwallet(const UniValue& params, bool fHelp);
@@ -5225,6 +5277,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "dumpprivkey",              &dumpprivkey,              true  },
     { "wallet",             "dumpwallet",               &dumpwallet,               true  },
     { "wallet",             "encryptwallet",            &encryptwallet,            true  },
+    { "wallet",             "getrescaninfo",            &getrescaninfo,            true  },
     { "wallet",             "getaccountaddress",        &getaccountaddress,        true  },
     { "wallet",             "getaccount",               &getaccount,               true  },
     { "wallet",             "getaddressesbyaccount",    &getaddressesbyaccount,    true  },
@@ -5236,6 +5289,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "gettransaction",           &gettransaction,           false },
     { "wallet",             "getunconfirmedbalance",    &getunconfirmedbalance,    false },
     { "wallet",             "getwalletinfo",            &getwalletinfo,            false },
+    { "wallet",             "rescanblockchain",         &rescanblockchain,         true  },
     { "wallet",             "importprivkey",            &importprivkey,            true  },
     { "wallet",             "importwallet",             &importwallet,             true  },
     { "wallet",             "importaddress",            &importaddress,            true  },
@@ -5243,6 +5297,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "keypoolrefill",            &keypoolrefill,            true  },
     { "wallet",             "listaccounts",             &listaccounts,             false },
     { "wallet",             "listaddressgroupings",     &listaddressgroupings,     false },
+    { "wallet",             "getaddresses",             &getaddresses,             false },
     { "wallet",             "listlockunspent",          &listlockunspent,          false },
     { "wallet",             "listreceivedbyaccount",    &listreceivedbyaccount,    false },
     { "wallet",             "listreceivedbyaddress",    &listreceivedbyaddress,    false },

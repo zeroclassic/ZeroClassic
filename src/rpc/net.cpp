@@ -164,6 +164,35 @@ UniValue getpeerinfo(const UniValue& params, bool fHelp)
     return ret;
 }
 
+int32_t longestchain()
+{
+    int32_t max_height = 0;
+    vector<CNodeStats> vstats;
+    
+    {
+        CopyNodeStats(vstats);
+    }
+    
+    for (const CNodeStats& stats : vstats)
+    {
+        CNodeStateStats statestats;
+        bool fStateStats = GetNodeStateStats(stats.nodeid, statestats);
+        if (statestats.nSyncHeight < 0)
+        {
+            continue;
+        }    
+        
+        int32_t peer_height = 0;
+        
+        peer_height = (stats.nStartingHeight > peer_height) ? stats.nStartingHeight : peer_height;
+        peer_height = (statestats.nSyncHeight > peer_height) ? statestats.nSyncHeight : peer_height;
+        peer_height = (statestats.nCommonHeight > peer_height) ? statestats.nCommonHeight : peer_height;
+        max_height = (peer_height > max_height) ? peer_height : max_height; 
+    }
+
+    return max_height;
+}
+
 UniValue addnode(const UniValue& params, bool fHelp)
 {
     string strCommand;
