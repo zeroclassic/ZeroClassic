@@ -1671,6 +1671,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         LOCK(cs_main);
         LogPrintf("mapBlockIndex.size() = %u\n", mapBlockIndex.size());
         LogPrintf("nBestHeight = %d\n", chainActive.Height());
+        // update start time and height for metrics download speed calculation
+        MarkDownloadStart(chainActive.Height());
     }
 #ifdef ENABLE_WALLET
     if (pwalletMain)

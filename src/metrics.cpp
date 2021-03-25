@@ -75,6 +75,8 @@ double AtomicTimer::rate(const AtomicCounter& count)
 static CCriticalSection cs_metrics;
 
 static boost::synchronized_value<int64_t> nNodeStartTime;
+static boost::synchronized_value<int64_t> nNodeDownloadStartTime;
+static boost::synchronized_value<int64_t> nNodeDownloadStartHeight;
 static boost::synchronized_value<int64_t> nNextRefresh;
 AtomicCounter transactionsValidated;
 AtomicCounter ehSolverRuns;
@@ -107,6 +109,19 @@ void MarkStartTime()
 int64_t GetUptime()
 {
     return GetTime() - *nNodeStartTime;
+}
+
+void MarkDownloadStart(int height)
+{
+    *nNodeDownloadStartTime = GetTime();
+    *nNodeDownloadStartHeight = height;
+}
+
+int64_t GetDownloadSpeed(int height)
+{
+    int64_t download_uptime = GetTime() - *nNodeDownloadStartTime;
+    int delta_height = height - *nNodeDownloadStartHeight;
+    return (download_uptime > 0) ? delta_height / download_uptime : 0;
 }
 
 double GetLocalSolPS()
@@ -146,6 +161,44 @@ int EstimateNetHeight(const Consensus::Params& params, int currentHeadersHeight,
 
     int netheight =  blossomActivationHeight + (now - blossomActivationTime) / params.PoWTargetSpacing(blossomActivationHeight);
     return ((netheight + 5) / 10) * 10;
+}
+
+int MyEstimateNetHeight()
+{
+    int estimated_longest = 0;
+    std::vector<CNodeStats> vstats;
+    vstats.clear();
+
+    //LOCK(cs_main); // required or not ?
+
+    {
+        LOCK(cs_vNodes);
+        vstats.reserve(vNodes.size());
+        for(CNode* pnode : vNodes)
+        {
+            CNodeStats stats;
+            pnode->copyStats(stats);
+            vstats.push_back(stats);
+        }
+    }
+
+    for(const CNodeStats& stats : vstats)
+    {
+        CNodeStateStats statestats;
+        bool fStateStats = GetNodeStateStats(stats.nodeid, statestats);
+
+        if (stats.nStartingHeight > estimated_longest)
+        {
+            estimated_longest = stats.nStartingHeight;
+        }
+
+        if (fStateStats && statestats.nSyncHeight > estimated_longest)
+        {
+            estimated_longest = statestats.nSyncHeight;
+        }
+    }
+
+    return estimated_longest;
 }
 
 void TriggerRefresh()
@@ -336,13 +389,18 @@ int printStats(MetricsStats stats, bool isScreen, bool mining)
             int downloadPercent = nSizeReindexed * 100 / nFullSizeToReindex;
             std::cout << "      " << _("Reindexing blocks") << " | "
                 << DisplaySize(nSizeReindexed) << " / " << DisplaySize(nFullSizeToReindex)
-                << " (" << downloadPercent << "%, " << stats.height << " " << _("blocks") << ")" << std::endl;
+                << " (" << downloadPercent << "%, " << stats.height << " " << _("blocks") << ") @ ~" << GetDownloadSpeed(stats.height) << " blk/s" << std::endl;
         } else {
             int nHeaders = stats.currentHeadersHeight;
             if (nHeaders < 0)
                 nHeaders = 0;
+            /*
             int netheight = stats.currentHeadersHeight == -1 || stats.currentHeadersTime == 0 ?
                 0 : EstimateNetHeight(params, stats.currentHeadersHeight, stats.currentHeadersTime);
+            */
+
+            int netheight = stats.currentHeadersHeight == -1 || stats.currentHeadersTime == 0 ? 0 : MyEstimateNetHeight();
+
             if (netheight < nHeaders)
                 netheight = nHeaders;
             if (netheight <= 0)
@@ -350,7 +408,7 @@ int printStats(MetricsStats stats, bool isScreen, bool mining)
             int downloadPercent = stats.height * 100 / netheight;
             std::cout << "     " << _("Downloading blocks") << " | "
                 << stats.height << " (" << nHeaders << " " << _("headers") << ") / ~" << netheight
-                << " (" << downloadPercent << "%)" << std::endl;
+                << " (" << downloadPercent << "%) @ ~" << GetDownloadSpeed(stats.height) << " blk/s" << std::endl;
 
             if (isScreen) {
                 // Draw 50-character progress bar, which will fit into a 79-character line.
@@ -628,7 +686,7 @@ void ThreadShowMetricsScreen()
 
         // Privacy notice text
         //std::cout << PrivacyInfo();
-        std::cout << std::endl;
+        //std::cout << std::endl;
     }
 
     while (true) {
