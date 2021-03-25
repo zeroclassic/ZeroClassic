@@ -4027,11 +4027,29 @@ bool ContextualCheckBlockHeader(
     // Explanations of these activation heights are in src/consensus/params.h
     // and chainparams.cpp.
     //
-    if (consensusParams.FutureTimestampSoftForkActive(nHeight) &&
-          block.GetBlockTime() > medianTimePast + MAX_FUTURE_BLOCK_TIME_MTP) {
-        return state.Invalid(error("%s: block at height %d, timestamp %d is too far ahead of median-time-past, limit is %d",
-                                   __func__, nHeight, block.GetBlockTime(), medianTimePast + MAX_FUTURE_BLOCK_TIME_MTP),
-                             REJECT_INVALID, "time-too-far-ahead-of-mtp");
+    if (consensusParams.FutureTimestampSoftForkActive(nHeight) && block.GetBlockTime() > medianTimePast + MAX_FUTURE_BLOCK_TIME_MTP)
+    {
+        // rule violation occured
+        bool known_violator = false; 
+        for (auto height_range : chainParams.GetMTPExceptions())
+        {
+            if (nHeight >= height_range.first && nHeight <= height_range.second)
+            {
+                known_violator = true;
+                break;
+            }
+        }
+        
+        if (known_violator)
+        {
+            LogPrintf("ContextualCheckBlockHeader: Block %u is violating future timestamp soft fork rule, but it's known exception\n", nHeight);
+        }
+        else
+        {
+            return state.Invalid(error("%s: block at height %d, timestamp %d is too far ahead of median-time-past, limit is %d",
+                                       __func__, nHeight, block.GetBlockTime(), medianTimePast + MAX_FUTURE_BLOCK_TIME_MTP),
+                                 REJECT_INVALID, "time-too-far-ahead-of-mtp");
+        }
     }
 
     // Check timestamp

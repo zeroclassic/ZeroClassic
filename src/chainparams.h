@@ -88,6 +88,7 @@ public:
     const CCheckpointData& Checkpoints() const { return checkpointData; }
     /** Enforce coinbase consensus rule in regtest mode */
     void SetRegTestCoinbaseMustBeShielded() { consensus.fCoinbaseMustBeShielded = true; }
+    const std::vector<std::pair<int64_t, int64_t>>& GetMTPExceptions() const { return vMTPExceptions; }
 protected:
     CChainParams() {}
 
@@ -110,6 +111,7 @@ protected:
     bool fMineBlocksOnDemand = false;
     bool fTestnetToBeDeprecatedFieldRPC = false;
     CCheckpointData checkpointData;
+    std::vector<std::pair<int64_t, int64_t>> vMTPExceptions;
 
     CAmount nSproutValuePoolCheckpointHeight = 0;
     CAmount nSproutValuePoolCheckpointBalance = 0;

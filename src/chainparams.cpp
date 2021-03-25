@@ -214,6 +214,19 @@ public:
         nSproutValuePoolCheckpointBalance = 5271220128799;
         fZIP209Enabled = true;
         hashSproutValuePoolCheckpointBlock = uint256S("000099fbc504a4029a8be467b9362637c6b450dd62c66b1a1b9d7b9d89d1c24e");
+
+        // Historical blocks violating future timestamp soft fork rule introduced in v2.1.1-1
+        // represented as inclusive ranges of heights
+        vMTPExceptions =
+        {
+            {118245, 118250},
+            {159336, 159344},
+            {267941, 267942},
+            {412303, 412359},
+            {607545, 607550},
+            {754446, 754446}
+        };
+
     }
 };
 static CMainParams mainParams;
