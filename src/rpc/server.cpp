@@ -481,17 +481,23 @@ std::string JSONRPCExecBatch(const UniValue& vReq)
 
 UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params) const
 {
-    // Return immediately if in warmup
-    {
-        LOCK(cs_rpcWarmup);
-        if (fRPCInWarmup)
-            throw JSONRPCError(RPC_IN_WARMUP, rpcWarmupStatus);
-    }
-
+    // commands allowed in warmup
+    const std::set<const std::string> ssAllowedCmds = {"help", "stop", "getnetworkinfo", "getdeprecationinfo", "listbanned", "clearbanned"};
+    
     // Find method
     const CRPCCommand *pcmd = tableRPC[strMethod];
     if (!pcmd)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Method not found");
+
+    // Return if in warmup
+    {
+        LOCK(cs_rpcWarmup);
+        if (fRPCInWarmup)
+        {
+            if (ssAllowedCmds.find(pcmd->name) == ssAllowedCmds.end())
+                throw JSONRPCError(RPC_IN_WARMUP, rpcWarmupStatus);
+        }
+    }
 
     if (!initWitnessesBuilt && pcmd->name == "z_sendmany")
         throw JSONRPCError(RPC_DISABLED_BEFORE_WITNESSES, "RPC Command disabled until witnesses are built.");
