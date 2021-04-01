@@ -1421,7 +1421,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     // https://github.com/bitpay/bitcoin/commit/c91d78b578a8700a45be936cb5bb0931df8f4b87#diff-c865a8939105e6350a50af02766291b7R1233
     if (GetBoolArg("-insightexplorer", false)) {
-        if (!GetBoolArg("-txindex", false)) {
+        if (!GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
             return InitError(_("-insightexplorer requires -txindex."));
         }
         // increase cache if additional indices are needed
