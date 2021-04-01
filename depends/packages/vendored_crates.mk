@@ -1,6 +1,6 @@
 package=vendored_crates
-$(package)_version=v4.3.0-1
-$(package)_download_path=https://github.com/miodragpop/zeroclassic-vendored-crates/releases/download/$($(package)_version)
+$(package)_version=v4.3.0
+$(package)_download_path=https://github.com/zeroclassic/zeroclassic-vendored-crates/releases/download/$($(package)_version)
 $(package)_file_name=vendored-crates.tar.gz
 $(package)_download_file=vendored-sources-$($(package)_version).tar.gz
-$(package)_sha256_hash=7f384244d0cb0195b2d308b0408789a21b455ecc7b809e6e110b37f67663c80b
+$(package)_sha256_hash=94e249c555fafc0e75b0943695987e5da1467974cd7f9c0ca05ff946ce0dbb25
