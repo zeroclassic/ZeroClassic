@@ -1,5 +1,5 @@
 ZeroClassic v4.3.0
-<img align="right" width="120" height="80" src="doc/imgs/logo.png">
+<img align="right" width="80" height="80" src="doc/imgs/logo.png">
 ===========
 
 What is ZeroClassic?
@@ -13,7 +13,7 @@ confidentiality of transaction metadata.
 What differentiates ZeroClassic from Zcash?
 --------------
 
-* No developer fees, founders rewards, funding streams or similar rules imposed to tax miners,
+* No developer fees, founder rewards, funding streams or similar rules imposed to tax miners,
 * No "engineered scarcity" known as "halving", you are never "late to the party",
 * Proof of Work algorithm still resists ASICs,
 * The team is not backed up by any company, we are just few people with passion for technology, freedom and privacy.
