@@ -78,10 +78,10 @@ clean_dirs .libs
 clean_dirs __pycache__
 
 clean_exe src/bench/bench_bitcoin
-clean_exe src/zcash-cli
-clean_exe src/zcashd
-clean_exe src/zcash-gtest
-clean_exe src/zcash-tx
+clean_exe src/zero-cli
+clean_exe src/zerod
+clean_exe src/zero-gtest
+clean_exe src/zero-tx
 clean_exe src/test/test_bitcoin
 
 clean_exe src/leveldb/db_bench

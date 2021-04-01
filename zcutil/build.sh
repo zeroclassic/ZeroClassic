@@ -37,7 +37,7 @@ fi
 
 # Allow users to set arbitrary compile flags. Most users will not need this.
 if [ -z "${CONFIGURE_FLAGS-}" ]; then
-    CONFIGURE_FLAGS=""
+    CONFIGURE_FLAGS="--disable-tests --disable-bench"
 fi
 
 if [ "x$*" = 'x--help' ]
@@ -49,8 +49,8 @@ $0 --help
   Show this help message and exit.
 
 $0 [ MAKEARGS... ]
-  Build Zcash and most of its transitive dependencies from
-  source. MAKEARGS are applied to both dependencies and Zcash itself.
+  Build ZeroClassic and most of its transitive dependencies from
+  source. MAKEARGS are applied to both dependencies and ZeroClassic itself.
 
   Pass flags to ./configure using the CONFIGURE_FLAGS environment variable.
   For example, to enable coverage instrumentation (thus enabling "make cov"
