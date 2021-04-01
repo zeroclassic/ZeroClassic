@@ -31,6 +31,8 @@
 
 #include <boost/thread.hpp>
 
+#include <rust/metrics.h>
+
 // Dump addresses to peers.dat and banlist.dat every 15 minutes (900s)
 #define DUMP_ADDRESSES_INTERVAL 900
 
@@ -466,7 +468,7 @@ void CNode::PushVersion()
     else
         LogPrint("net", "send version message: version %d, blocks=%d, us=%s, peer=%d\n", PROTOCOL_VERSION, nBestHeight, addrMe.ToString(), id);
     PushMessage("version", PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
-                nLocalHostNonce, strSubVersion, nBestHeight, true);
+                nLocalHostNonce, strSubVersion, nBestHeight, !GetBoolArg("-blocksonly", DEFAULT_BLOCKSONLY));
 }
 
 
@@ -638,6 +640,7 @@ void CNode::copyStats(CNodeStats &stats)
 {
     stats.nodeid = this->GetId();
     stats.nServices = nServices;
+    stats.fRelayTxes = fRelayTxes;
     stats.nLastSend = nLastSend;
     stats.nLastRecv = nLastRecv;
     stats.nTimeConnected = nTimeConnected;
@@ -702,6 +705,11 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes)
 
         if (msg.complete()) {
             msg.nTime = GetTimeMicros();
+            std::string strCommand = SanitizeString(msg.hdr.GetCommand());
+            MetricsIncrementCounter("zcash.net.in.messages", "command", strCommand.c_str());
+            MetricsCounter(
+                "zcash.net.in.bytes", msg.hdr.nMessageSize,
+                "command", strCommand.c_str());
             messageHandlerCondition.notify_one();
         }
     }
@@ -1104,6 +1112,7 @@ void ThreadSocketHandler()
         }
         if (vNodesSize != nPrevNodeCount) {
             nPrevNodeCount = vNodesSize;
+            MetricsGauge("zcash.net.peers", nPrevNodeCount);
             uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);
         }
 
@@ -2001,12 +2010,14 @@ void CNode::RecordBytesRecv(uint64_t bytes)
 {
     LOCK(cs_totalBytesRecv);
     nTotalBytesRecv += bytes;
+    MetricsCounter("zcash.net.in.bytes.total", bytes);
 }
 
 void CNode::RecordBytesSent(uint64_t bytes)
 {
     LOCK(cs_totalBytesSent);
     nTotalBytesSent += bytes;
+    MetricsCounter("zcash.net.out.bytes.total", bytes);
 
     uint64_t now = GetTime();
     if (nMaxOutboundCycleStartTime + nMaxOutboundTimeframe < now)
@@ -2218,11 +2229,11 @@ CNode::~CNode()
 void CNode::ReloadTracingSpan()
 {
     if (fLogIPs) {
-        span = TracingSpanFields("info", "net", "Peer",
+        span = TracingSpan("info", "net", "Peer",
             "id", idStr.c_str(),
             "addr", addrName.c_str());
     } else {
-        span = TracingSpanFields("info", "net", "Peer",
+        span = TracingSpan("info", "net", "Peer",
             "id", idStr.c_str());
     }
 }
@@ -2265,13 +2276,16 @@ void CNode::BeginMessage(const char* pszCommand) EXCLUSIVE_LOCK_FUNCTION(cs_vSen
 {
     ENTER_CRITICAL_SECTION(cs_vSend);
     assert(ssSend.size() == 0);
+    assert(strSendCommand.empty());
     ssSend << CMessageHeader(Params().MessageStart(), pszCommand, 0);
-    LogPrint("net", "sending: %s ", SanitizeString(pszCommand));
+    strSendCommand = SanitizeString(pszCommand);
+    LogPrint("net", "sending: %s ", strSendCommand);
 }
 
 void CNode::AbortMessage() UNLOCK_FUNCTION(cs_vSend)
 {
     ssSend.clear();
+    strSendCommand.clear();
 
     LEAVE_CRITICAL_SECTION(cs_vSend);
 
@@ -2280,6 +2294,7 @@ void CNode::AbortMessage() UNLOCK_FUNCTION(cs_vSend)
 
 void CNode::EndMessage() UNLOCK_FUNCTION(cs_vSend)
 {
+    MetricsIncrementCounter("zcash.net.out.messages", "command", strSendCommand.c_str());
     // The -*messagestest options are intentionally not documented in the help message,
     // since they are only used during development to debug the networking code and are
     // not intended for end-users.
@@ -2313,6 +2328,10 @@ void CNode::EndMessage() UNLOCK_FUNCTION(cs_vSend)
     std::deque<CSerializeData>::iterator it = vSendMsg.insert(vSendMsg.end(), CSerializeData());
     ssSend.GetAndClear(*it);
     nSendSize += (*it).size();
+    MetricsCounter(
+        "zcash.net.out.bytes", (*it).size(),
+        "command", strSendCommand.c_str());
+    strSendCommand.clear();
 
     // If write queue empty, attempt "optimistic write"
     if (it == vSendMsg.begin())
