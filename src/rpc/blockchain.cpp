@@ -949,8 +949,8 @@ UniValue exportchain(const UniValue& params, bool fHelp)
     fs::path path = fs::current_path() / filename; 
     FILE* file = fsbridge::fopen(path, "wb+");
     if (!file) {
-        ret.pushKV("result", true);
-        ret.pushKV("description", strprintf("%s created", filename));
+        ret.pushKV("result", false);
+        ret.pushKV("description", strprintf("%s not created", filename));
     } else {
         CAutoFile fileout(file, SER_DISK, CLIENT_VERSION);
 
