@@ -14,7 +14,6 @@
 #include <optional>
 #include <variant>
 
-
 namespace Consensus {
 
 // Early declaration to ensure it is accessible.
@@ -38,7 +37,9 @@ enum UpgradeIndex : uint32_t {
     UPGRADE_HEARTWOOD,
     UPGRADE_CANOPY,
     UPGRADE_NU5,
+    // Add new network upgrades before this line.
     // NOTE: Also add new upgrades to NetworkUpgradeInfo in upgrades.cpp
+    UPGRADE_ZFUTURE,
     MAX_NETWORK_UPGRADES
 };
 
@@ -86,6 +87,71 @@ struct NetworkUpgrade {
 
 static const unsigned int POW_TARGET_SPACING = 120;
 
+enum ConsensusFeature : uint32_t {
+    // Index value for the maximum consensus feature ID.
+    MAX_FEATURES
+};
+const auto FIRST_CONSENSUS_FEATURE = MAX_FEATURES;
+
+template <class Feature>
+struct FeatureInfo {
+    std::vector<Feature> dependsOn;
+    UpgradeIndex activation;
+};
+
+/**
+ * A FeatureSet encodes a directed acyclic graph of feature dependencies
+ * as an array indexed by feature ID. Values are FeatureInfo objects
+ * containing the list of feature IDs upon which the index's feature ID
+ * depends.
+ *
+ * The `Feature` and `Params` template parameters permit for the
+ * logic of `FeatureActive` to be tested against a mock set of
+ * features and activation heights.
+ */
+template <class Feature, class Params>
+class FeatureSet {
+private:
+    std::vector<FeatureInfo<Feature>> features;
+public:
+    FeatureSet(std::vector<FeatureInfo<Feature>> features): features(features) {
+    }
+
+    bool FeatureActive(
+            const Params& params,
+            const int nHeight,
+            const Feature feature) const {
+        assert(feature < features.size());
+
+        // The feature must be explicitly required by a CLI argument or by
+        // the feature being universally available above a network upgrade
+        // activation height.
+        if (params.NetworkUpgradeActive(nHeight, features[feature].activation) ||
+                params.FeatureRequired(feature)) {
+            // Transitively check that if a feature is active, all of the other features
+            // that it depends on are also active.
+            auto requires = features[feature].dependsOn;
+            assert(std::all_of(
+                requires.begin(),
+                requires.end(),
+                [&](Feature feat) {
+                    return FeatureActive(params, nHeight, feat);
+                }
+            ));
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+};
+
+/**
+ * The set of supported features.
+ */
+const FeatureSet<ConsensusFeature, Params> Features({});
+
+
 /**
  * Parameters that influence chain consensus.
  */
@@ -99,6 +165,10 @@ struct Params {
 
     bool FutureTimestampSoftForkActive(int nHeight) const;
 
+    bool FeatureActive(int nHeight, Consensus::ConsensusFeature feature) const;
+
+    bool FeatureRequired(Consensus::ConsensusFeature feature) const;
+
     uint256 hashGenesisBlock;
 
     bool fCoinbaseMustBeShielded = false;
@@ -108,6 +178,13 @@ struct Params {
     int nMajorityRejectBlockOutdated;
     int nMajorityWindow;
     NetworkUpgrade vUpgrades[MAX_NETWORK_UPGRADES];
+
+    /**
+     * A set of features that have been explicitly force-enabled
+     * via the CLI, overriding block-height based decisions for
+     * this feature.
+     */
+    std::set<ConsensusFeature> vRequiredFeatures;
 
     /**
      * Default block height at which the future timestamp soft fork rule activates.
@@ -167,7 +244,6 @@ struct Params {
 
     uint256 nMinimumChainWork;
 };
-
 } // namespace Consensus
 
 #endif // BITCOIN_CONSENSUS_PARAMS_H
