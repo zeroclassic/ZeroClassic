@@ -1,3 +1,9 @@
+ifneq ($(host),$(build))
+host_toolchain:=$(host)-
+else
+host_toolchain:=
+endif
+
 default_host_CC = $(host_toolchain)gcc
 default_host_CXX = $(host_toolchain)g++
 default_host_AR = $(host_toolchain)ar
