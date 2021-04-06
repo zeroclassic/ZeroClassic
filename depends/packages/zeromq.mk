@@ -5,10 +5,6 @@ $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=c593001a89f5a85dd2ddf564805deb860e02471171b3f204944857336295c3e5
 $(package)_patches=windows-unused-variables.diff
 
-ifneq ($(host_os),darwin)
-$(package)_dependencies=libcxx
-endif
-
 define $(package)_set_vars
   $(package)_config_opts=--without-docs --disable-shared --disable-curve --disable-curve-keygen --disable-perf
   $(package)_config_opts += --without-libgssapi_krb5 --without-pgm --without-norm --without-vmci
@@ -17,13 +13,6 @@ define $(package)_set_vars
   $(package)_config_opts_linux=--with-pic
   $(package)_config_opts_freebsd=--with-pic
   $(package)_cxxflags+=-std=c++17
-
-  ifeq ($(host_os),freebsd)
-    $(package)_ldflags+=-static-libstdc++ -lcxxrt
-  else
-    $(package)_ldflags+=-static-libstdc++ -lc++abi
-  endif
-
 endef
 
 define $(package)_preprocess_cmds

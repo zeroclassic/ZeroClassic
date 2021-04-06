@@ -5,10 +5,6 @@ $(package)_file_name=db-$($(package)_version).tar.gz
 $(package)_sha256_hash=a9c5e2b004a5777aa03510cfe5cd766a4a3b777713406b02809c17c8e0e7a8fb
 $(package)_build_subdir=build_unix
 
-ifneq ($(host_os),darwin)
-$(package)_dependencies=libcxx
-endif
-
 define $(package)_set_vars
 $(package)_config_opts=--disable-shared --enable-cxx --disable-replication --enable-option-checking
 $(package)_config_opts_mingw32=--enable-mingw
@@ -19,13 +15,6 @@ $(package)_config_opts_darwin=--disable-atomicsupport
 endif
 $(package)_config_opts_aarch64=--disable-atomicsupport
 $(package)_cxxflags+=-std=c++17
-
-ifeq ($(host_os),freebsd)
-  $(package)_ldflags+=-static-libstdc++ -lcxxrt
-else
-  $(package)_ldflags+=-static-libstdc++ -lc++abi
-endif
-
 endef
 
 define $(package)_preprocess_cmds

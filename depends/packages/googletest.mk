@@ -5,21 +5,10 @@ $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_download_file=release-$($(package)_version).tar.gz
 $(package)_sha256_hash=9bf1fe5182a604b4135edc1a425ae356c9ad15e9b23f9f12a02e80184c3a249c
 
-ifneq ($(host_os),darwin)
-$(package)_dependencies=libcxx
-endif
-
 define $(package)_set_vars
 $(package)_cxxflags+=-std=c++17
 $(package)_cxxflags_linux=-fPIC
 $(package)_cxxflags_freebsd=-fPIC
-
-ifeq ($(host_os),freebsd)
-  $(package)_ldflags+=-static-libstdc++ -lcxxrt
-else
-  $(package)_ldflags+=-static-libstdc++ -lc++abi
-endif
-
 endef
 
 define $(package)_build_cmds

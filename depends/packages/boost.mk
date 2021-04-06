@@ -6,10 +6,6 @@ $(package)_sha256_hash=83bfc1507731a0906e387fc28b7ef5417d591429e51e788417fe9ff02
 $(package)_dependencies=native_b2
 $(package)_patches=iostreams-106.patch signals2-noise.patch deprecated-two-arg-allocate.diff
 
-ifneq ($(host_os),darwin)
-$(package)_dependencies+=libcxx
-endif
-
 define $(package)_set_vars
 $(package)_config_opts_release=variant=release
 $(package)_config_opts_debug=variant=debug
@@ -23,22 +19,11 @@ $(package)_config_opts_x86_64=architecture=x86 address-model=64
 $(package)_config_opts_i686=architecture=x86 address-model=32
 $(package)_config_opts_aarch64=address-model=64
 $(package)_config_opts_armv7a=address-model=32
-ifneq (,$(findstring clang,$($(package)_cxx)))
-$(package)_toolset_$(host_os)=clang
-else
 $(package)_toolset_$(host_os)=gcc
-endif
 $(package)_config_libraries=chrono,filesystem,program_options,system,thread,test
 $(package)_cxxflags+=-std=c++17 -fvisibility=hidden
 $(package)_cxxflags_linux=-fPIC
 $(package)_cxxflags_freebsd=-fPIC
-
-ifeq ($(host_os),freebsd)
-  $(package)_ldflags+=-static-libstdc++ -lcxxrt
-else
-  $(package)_ldflags+=-static-libstdc++ -lc++abi
-endif
-
 endef
 
 define $(package)_preprocess_cmds
