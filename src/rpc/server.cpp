@@ -482,7 +482,7 @@ std::string JSONRPCExecBatch(const UniValue& vReq)
 UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params) const
 {
     // commands allowed in warmup
-    const std::set<const std::string> ssAllowedCmds = {"help", "stop", "getnetworkinfo", "getdeprecationinfo", "listbanned", "clearbanned"};
+    const std::set<const char*> ssAllowedCmds = {"help", "stop", "getnetworkinfo", "getdeprecationinfo", "listbanned", "clearbanned"};
     
     // Find method
     const CRPCCommand *pcmd = tableRPC[strMethod];
@@ -494,7 +494,7 @@ UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params
         LOCK(cs_rpcWarmup);
         if (fRPCInWarmup)
         {
-            if (ssAllowedCmds.find(pcmd->name) == ssAllowedCmds.end())
+            if (ssAllowedCmds.find(pcmd->name.c_str()) == ssAllowedCmds.end())
                 throw JSONRPCError(RPC_IN_WARMUP, rpcWarmupStatus);
         }
     }
