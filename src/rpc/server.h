@@ -18,7 +18,8 @@
 
 #include <univalue.h>
 
-extern bool initWitnessesBuilt;
+extern bool fBuildingWitnessCache;
+extern bool fInitWitnessesBuilt;
 
 class AsyncRPCQueue;
 class CRPCCommand;
