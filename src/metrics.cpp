@@ -663,21 +663,7 @@ void ThreadShowMetricsScreen()
         std::cout << "\e[2J";
 
         // Print art
-#ifdef WIN32
-		// dirty workaround, avoiding UTF8 to locale conversion routines
-		std::string met = METRICS_ART;  
-		boost::replace_all(met, "█", "\xdb");
-		boost::replace_all(met, "┌", "\xda");
-		boost::replace_all(met, "─", "\xc4");
-		boost::replace_all(met, "┐", "\xbf");
-		boost::replace_all(met, "┘", "\xd9");
-		boost::replace_all(met, "└", "\xc0");
-		boost::replace_all(met, "\n", "\r\n");
-		std::cout << met << std::endl;
-#else
 		std::cout << METRICS_ART << std::endl;
-#endif        
-        //std::cout << std::endl;
 
         // Thank you text
         std::cout << strprintf(_("Thank you for running a %s \e[1m%s %s\e[0m node!"), WhichNetwork(), COIN_NAME, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<std::string>())) << std::endl;
