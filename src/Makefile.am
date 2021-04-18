@@ -225,6 +225,7 @@ BITCOIN_CORE_H = \
   utilstrencodings.h \
   utiltest.h \
   utiltime.h \
+  util/tokenpipe.h \
   validationinterface.h \
   version.h \
   wallet/asyncrpcoperation_common.h \
@@ -430,6 +431,7 @@ libbitcoin_util_a_SOURCES = \
   utilmoneystr.cpp \
   utilstrencodings.cpp \
   utiltime.cpp \
+  util/tokenpipe.cpp \
   $(BITCOIN_CORE_H) \
   $(LIBZCASH_H)
 
