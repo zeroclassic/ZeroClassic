@@ -16,6 +16,7 @@
 #include "consensus/validation.h"
 #include "experimental_features.h"
 #include "fs.h"
+#include "util/tokenpipe.h"
 #include "httpserver.h"
 #include "httprpc.h"
 #include "key.h"
@@ -133,10 +134,51 @@ CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 
 std::atomic<bool> fRequestShutdown(false);
 
+#ifdef WIN32
+/** On windows it is possible to simply use a condition variable. */
+std::mutex g_shutdown_mutex;
+std::condition_variable g_shutdown_cv;
+#else
+/** On UNIX-like operating systems use the self-pipe trick.
+ */
+static TokenPipeEnd g_shutdown_r;
+static TokenPipeEnd g_shutdown_w;
+#endif
+
+bool InitShutdownState()
+{
+#ifndef WIN32
+    std::optional<TokenPipe> pipe = TokenPipe::Make();
+    if (!pipe) return false;
+    g_shutdown_r = pipe->TakeReadEnd();
+    g_shutdown_w = pipe->TakeWriteEnd();
+#endif
+    return true;
+}
+
 void StartShutdown()
 {
+#ifdef WIN32
+    std::unique_lock<std::mutex> lk(g_shutdown_mutex);
     fRequestShutdown = true;
+    g_shutdown_cv.notify_one();
+#else
+    // This must be reentrant and safe for calling in a signal handler, so using a condition variable is not safe.
+    // Make sure that the token is only written once even if multiple threads call this concurrently or in
+    // case of a reentrant signal.
+    if (!fRequestShutdown.exchange(true)) {
+        // Write an arbitrary byte to the write end of the shutdown pipe.
+        int res = g_shutdown_w.TokenWrite('x');
+        if (res != 0) {
+            LogPrintf("Sending shutdown token failed\n");
+            assert(0);
+        }
+    }
+#endif
 }
+
+
+
 bool ShutdownRequested()
 {
     return fRequestShutdown;
@@ -269,15 +311,35 @@ void Shutdown()
 /**
  * Signal handlers are very limited in what they are allowed to do, so:
  */
+#ifndef WIN32
 void HandleSIGTERM(int)
 {
-    fRequestShutdown = true;
+    StartShutdown();
 }
 
 void HandleSIGHUP(int)
 {
     fReopenDebugLog = true;
 }
+#else
+static BOOL WINAPI consoleCtrlHandler(DWORD dwCtrlType)
+{
+    StartShutdown();
+    Sleep(INFINITE);
+    return true;
+}
+#endif
+
+#ifndef WIN32
+static void registerSignalHandler(int signal, void(*handler)(int))
+{
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(signal, &sa, nullptr);
+}
+#endif
 
 bool static InitError(const std::string &str)
 {
@@ -931,6 +993,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     // Ignore SIGPIPE, otherwise it will bring the daemon down if the client closes unexpectedly
     signal(SIGPIPE, SIG_IGN);
+#else
+    SetConsoleCtrlHandler(consoleCtrlHandler, true);
 #endif
 
     std::set_new_handler(new_handler_terminate);

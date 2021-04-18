@@ -639,6 +639,10 @@ bool enableVTMode()
     if (!SetConsoleMode(hOut, dwMode)) {
         return false;
     }
+    
+    // set Windows console code page to UTF8, because of block graphic char we use for ascii art
+    SetConsoleOutputCP(CP_UTF8);
+    
     return true;
 }
 #endif
@@ -663,21 +667,7 @@ void ThreadShowMetricsScreen()
         std::cout << "\e[2J";
 
         // Print art
-#ifdef WIN32
-		// dirty workaround, avoiding UTF8 to locale conversion routines
-		std::string met = METRICS_ART;  
-		boost::replace_all(met, "█", "\xdb");
-		boost::replace_all(met, "┌", "\xda");
-		boost::replace_all(met, "─", "\xc4");
-		boost::replace_all(met, "┐", "\xbf");
-		boost::replace_all(met, "┘", "\xd9");
-		boost::replace_all(met, "└", "\xc0");
-		boost::replace_all(met, "\n", "\r\n");
-		std::cout << met << std::endl;
-#else
 		std::cout << METRICS_ART << std::endl;
-#endif        
-        //std::cout << std::endl;
 
         // Thank you text
         std::cout << strprintf(_("Thank you for running a %s \e[1m%s %s\e[0m node!"), WhichNetwork(), COIN_NAME, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<std::string>())) << std::endl;
@@ -738,11 +728,7 @@ void ThreadShowMetricsScreen()
         if (isScreen) {
             // Explain how to exit
             std::cout << "[";
-#ifdef WIN32
-            std::cout << strprintf(_("'%s.exe stop' to exit"), COIN_CLI_EXECUTABLE.c_str());
-#else
             std::cout << _("Press Ctrl+C to exit");
-#endif
             std::cout << "] [" << _("Set 'showmetrics=0' to hide") << "]" << std::endl;
         } else {
             // Print delineator
