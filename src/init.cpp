@@ -163,9 +163,13 @@ void StartShutdown()
     fRequestShutdown = true;
     g_shutdown_cv.notify_one();
 #else
+    
     // This must be reentrant and safe for calling in a signal handler, so using a condition variable is not safe.
     // Make sure that the token is only written once even if multiple threads call this concurrently or in
     // case of a reentrant signal.
+    
+    // postpone tokenpipe involvement for now ...
+    /*
     if (!fRequestShutdown.exchange(true)) {
         // Write an arbitrary byte to the write end of the shutdown pipe.
         int res = g_shutdown_w.TokenWrite('x');
@@ -174,10 +178,12 @@ void StartShutdown()
             assert(0);
         }
     }
+    */
+
+   fRequestShutdown = true;
+
 #endif
 }
-
-
 
 bool ShutdownRequested()
 {
