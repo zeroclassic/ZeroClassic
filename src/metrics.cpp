@@ -639,6 +639,10 @@ bool enableVTMode()
     if (!SetConsoleMode(hOut, dwMode)) {
         return false;
     }
+    
+    // set Windows console code page to UTF8, because of block graphic char we use for ascii art
+    SetConsoleOutputCP(CP_UTF8);
+    
     return true;
 }
 #endif
@@ -724,11 +728,7 @@ void ThreadShowMetricsScreen()
         if (isScreen) {
             // Explain how to exit
             std::cout << "[";
-#ifdef WIN32
-            std::cout << strprintf(_("'%s.exe stop' to exit"), COIN_CLI_EXECUTABLE.c_str());
-#else
             std::cout << _("Press Ctrl+C to exit");
-#endif
             std::cout << "] [" << _("Set 'showmetrics=0' to hide") << "]" << std::endl;
         } else {
             // Print delineator
