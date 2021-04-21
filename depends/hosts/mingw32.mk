@@ -1,7 +1,7 @@
 mingw32_CFLAGS=-pipe
-mingw32_CXXFLAGS=$(mingw32_CFLAGS) -isystem $(host_prefix)/include/c++/v1
+mingw32_CXXFLAGS=$(mingw32_CFLAGS)
 
-mingw32_LDFLAGS?=-fuse-ld=lld -lntdll
+#mingw32_LDFLAGS?=-fuse-ld=lld -lntdll
 
 mingw32_release_CFLAGS=-O3
 mingw32_release_CXXFLAGS=$(mingw32_release_CFLAGS)
