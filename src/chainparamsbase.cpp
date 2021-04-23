@@ -46,7 +46,7 @@ public:
     CBaseTestNetParams()
     {
         nRPCPort = RC_COIN_RPC_PORT_TESTNET;
-        strDataDir = "testnet3";
+        strDataDir = "testnet0";
     }
 };
 static CBaseTestNetParams testNetParams;
