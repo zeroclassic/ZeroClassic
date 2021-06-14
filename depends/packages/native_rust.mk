@@ -3,6 +3,8 @@ $(package)_version=1.51.0
 $(package)_download_path=https://static.rust-lang.org/dist
 $(package)_file_name_linux=rust-$($(package)_version)-x86_64-unknown-linux-gnu.tar.gz
 $(package)_sha256_hash_linux=9e125977aa13f012a68fdc6663629c685745091ae244f0587dd55ea4e3a3e42f
+$(package)_file_name_aarch64_linux=rust-$($(package)_version)-aarch64-unknown-linux-gnu.tar.gz
+$(package)_sha256_hash_aarch64_linux=fd31c78fffad52c03cac5a7c1ee5db3f34b2a77d7bc862707c0f71e209180a84
 $(package)_file_name_darwin=rust-$($(package)_version)-x86_64-apple-darwin.tar.gz
 $(package)_sha256_hash_darwin=765212098a415996b767d1e372ce266caf94027402b269fec33291fffc085ca4
 $(package)_file_name_freebsd=rust-$($(package)_version)-x86_64-unknown-freebsd.tar.gz
@@ -13,11 +15,13 @@ $(package)_sha256_hash_freebsd=d764ab80889460caca86cda7b7ca2ced80544bb477634adc8
 # "darwin", in which case we assume x86_64-apple-darwin.
 $(package)_rust_target_x86_64-pc-linux-gnu=x86_64-unknown-linux-gnu
 $(package)_rust_target_x86_64-w64-mingw32=x86_64-pc-windows-gnu
+$(package)_rust_target_aarch64-linux-gnu=aarch64-unknown-linux-gnu
 
 # Mapping from Rust targets to SHA-256 hashes
 $(package)_rust_std_sha256_hash_aarch64-unknown-linux-gnu=a6ed4abe59dfaf2119e2803f67fd8aef757a622ae3ac9a040946af2b02f4c269
 $(package)_rust_std_sha256_hash_x86_64-apple-darwin=2856bc46d3624ae2658897c15388c0c353bea916963a2fc5991c23b920d5678c
 $(package)_rust_std_sha256_hash_x86_64-pc-windows-gnu=55f871bdaf361a26280ca5396297cc7c67237cd86d4ebfe3cbdf9fac14ce0327
+$(package)_rust_std_sha256_hash_x86_64-unknown-linux-gnu=5e7738090baf6dc12c3ed62fb02cf51f80af2403f6df85feae0ebf157e2d8d35
 
 define rust_target
 $(if $($(1)_rust_target_$(2)),$($(1)_rust_target_$(2)),$(if $(findstring darwin,$(3)),x86_64-apple-darwin,$(if $(findstring freebsd,$(3)),x86_64-unknown-freebsd,$(2))))
