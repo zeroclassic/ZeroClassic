@@ -1,6 +1,6 @@
 package=googletest
 $(package)_version=1.8.1
-$(package)_download_path=https://github.com/google/$(package)/archive/
+$(package)_download_path=https://github.com/google/$(package)/archive
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_download_file=release-$($(package)_version).tar.gz
 $(package)_sha256_hash=9bf1fe5182a604b4135edc1a425ae356c9ad15e9b23f9f12a02e80184c3a249c
