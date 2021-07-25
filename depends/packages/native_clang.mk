@@ -11,8 +11,8 @@ $(package)_download_file_darwin=clang+llvm-12.0.0-x86_64-apple-darwin.tar.xz
 $(package)_file_name_darwin=clang-llvm-12.0.0-x86_64-apple-darwin.tar.xz
 $(package)_sha256_hash_darwin=7bc2259bf75c003f644882460fc8e844ddb23b27236fe43a2787870a4cd8ab50
 $(package)_download_path_freebsd=https://github.com/llvm/llvm-project/releases/download/llvmorg-$($(package)_version)
-$(package)_download_file_freebsd=clang+llvm-$($(package)_version)-amd64-unknown-freebsd11.tar.xz
-$(package)_file_name_freebsd=clang-llvm-$($(package)_version)-amd64-unknown-freebsd11.tar.xz
+$(package)_download_file_freebsd=clang+llvm-$($(package)_version)-amd64-unknown-freebsd12.tar.xz
+$(package)_file_name_freebsd=clang-llvm-$($(package)_version)-amd64-unknown-freebsd12.tar.xz
 $(package)_sha256_hash_freebsd=38857da36489880b0504ae7142b74abe41cf18711a6bb25ca96792d8190e8b0e
 
 # Ensure we have clang native to the builder, not the target host
