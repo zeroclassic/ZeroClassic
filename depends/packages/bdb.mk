@@ -22,6 +22,8 @@ endif
 $(package)_config_opts_aarch64=--disable-atomicsupport
 $(package)_cxxflags+=-std=c++17
 
+$(package)_cflags_mingw32+=-fno-builtin-stpcpy
+
 ifneq ($(ZERC_TOOLCHAIN), GCC)
   ifeq ($(host_os),freebsd)
     $(package)_ldflags+=-static-libstdc++ -lcxxrt
