@@ -88,9 +88,14 @@ public:
     bool Enqueue(WorkItem* item)
     {
         std::unique_lock<std::mutex> lock(cs);
+        LogPrint("rpc", "RPC queue current depth = %i (maxDepth = %i)\n", queue.size(), maxDepth);
         if (queue.size() >= maxDepth) {
             return false;
         }
+
+        // "Parachute" against filling up the queue too fast, disabled for now
+        // MilliSleep(10 * queue.size());
+
         queue.emplace_back(std::unique_ptr<WorkItem>(item));
         cond.notify_one();
         return true;
