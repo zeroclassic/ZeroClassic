@@ -873,6 +873,7 @@ protected:
 
     template <typename WalletDB>
     void SetBestChainINTERNAL(WalletDB& walletdb, const CBlockLocator& loc) {
+        AssertLockHeld(cs_wallet);
         if (!walletdb.TxnBegin()) {
             // This needs to be done atomically, so don't do it at all
             LogPrintf("SetBestChain(): Couldn't start atomic write\n");
@@ -888,6 +889,11 @@ protected:
                 if (!(wtx.mapSproutNoteData.empty() && wtx.mapSaplingNoteData.empty())) {
                     if (!walletdb.WriteTx(wtx)) {
                         LogPrintf("SetBestChain(): Failed to write CWalletTx, aborting atomic write\n");
+                        walletdb.TxnAbort();
+                        return;
+                    }
+                    if (!walletdb.WriteArcTx(wtx)) {
+                        LogPrintf("SetBestChain(): Failed to write ArchiveTxPoint, aborting atomic write\n");
                         walletdb.TxnAbort();
                         return;
                     }

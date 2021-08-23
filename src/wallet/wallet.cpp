@@ -628,7 +628,11 @@ void CWallet::ChainTipAdded(const CBlockIndex *pindex,
             LOCK(cs_main);
             loc = chainActive.GetLocator(pindex);
         }
-        SetBestChain(loc);
+
+        {
+            LOCK(cs_wallet);
+            SetBestChain(loc);
+        }
     }
 }
 
