@@ -1508,335 +1508,325 @@ int CWallet::SaplingWitnessMinimumHeight(const uint256& nullifier, int nWitnessH
 
 int CWallet::VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessOnly)
 {
-  LOCK2(cs_main, cs_wallet);
+    LOCK2(cs_main, cs_wallet);
 
-  int nWitnessTxIncrement = 0;
-  int nWitnessTotalTxCount = mapWallet.size();
-  int nMinimumHeight = pindex->nHeight;
-  bool walletHasNotes = false; //Use to enable z_sendmany when no notes are present
+    int nWitnessTxIncrement = 0;
+    int nWitnessTotalTxCount = mapWallet.size();
+    int nMinimumHeight = pindex->nHeight;
+    bool walletHasNotes = false; // Use to enable z_sendmany when no notes are present
 
-  for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
-    nWitnessTxIncrement += 1;
+    for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
+        nWitnessTxIncrement += 1;
 
-    if (wtxItem.second.mapSproutNoteData.empty() && wtxItem.second.mapSaplingNoteData.empty())
-      continue;
-
-    if (wtxItem.second.GetDepthInMainChain() > 0) {
-      walletHasNotes = true;
-      auto wtxHash = wtxItem.second.GetHash();
-      int wtxHeight = mapBlockIndex[wtxItem.second.hashBlock]->nHeight;
-
-      for (mapSproutNoteData_t::value_type& item : wtxItem.second.mapSproutNoteData) {
-
-        auto op = item.first;
-        auto* nd = &(item.second);
-        CBlockIndex* pblockindex;
-        uint256 blockRoot;
-        uint256 witnessRoot;
-
-        if (!nd->nullifier)
-          ::ClearSingleNoteWitnessCache(nd);
-
-        if (!nd->witnesses.empty() && nd->witnessHeight > 0) {
-
-          //Skip all functions for validated witness while witness only = true
-          if (nd->witnessRootValidated && witnessOnly)
+        if (wtxItem.second.mapSproutNoteData.empty() && wtxItem.second.mapSaplingNoteData.empty()) {
             continue;
-
-          //Skip Validation when witness root has been validated
-          if (nd->witnessRootValidated) {
-            nMinimumHeight = SproutWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-            continue;
-          }
-
-          //Skip Validation when witness height is greater that block height
-          if (nd->witnessHeight > pindex->nHeight - 1) {
-            nMinimumHeight = SproutWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-            continue;
-          }
-
-          //Validate the witness at the witness height
-          witnessRoot = nd->witnesses.front().root();
-          pblockindex = chainActive[nd->witnessHeight];
-          blockRoot = pblockindex->hashFinalSproutRoot;
-          if (witnessRoot == blockRoot) {
-            nd->witnessRootValidated = true;
-            nMinimumHeight = SproutWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-            continue;
-          }
         }
 
-        //Clear witness Cache for all other scenarios
-        pblockindex = chainActive[wtxHeight];
-        ::ClearSingleNoteWitnessCache(nd);
+        if (wtxItem.second.GetDepthInMainChain() > 0) {
+            walletHasNotes = true;
+            const uint256 wtxHash = wtxItem.second.GetHash();
+            const int wtxHeight = mapBlockIndex[wtxItem.second.hashBlock]->nHeight;
 
-        LogPrintf("Setting Inital Sprout Witness for tx %s, %i of %i\n", wtxHash.ToString(), nWitnessTxIncrement, nWitnessTotalTxCount);
+            // Sprout
+            for (mapSproutNoteData_t::value_type& item : wtxItem.second.mapSproutNoteData) {
+                JSOutPoint op = item.first;
+                SproutNoteData* nd = &(item.second);
+                CBlockIndex* pblockindex;
+                uint256 blockRoot;
+                uint256 witnessRoot;
 
-        SproutMerkleTree sproutTree;
-        blockRoot = pblockindex->pprev->hashFinalSproutRoot;
-        pcoinsTip->GetSproutAnchorAt(blockRoot, sproutTree);
-
-        //Cycle through blocks and transactions building sprout tree until the commitment needed is reached
-        const CBlock* pblock;
-        CBlock block;
-        ReadBlockFromDisk(block, pblockindex, Params().GetConsensus());
-        pblock = &block;
-
-        for (const CTransaction& tx : block.vtx) {
-          auto hash = tx.GetHash();
-
-          for (size_t i = 0; i < tx.vJoinSplit.size(); i++) {
-            const JSDescription& jsdesc = tx.vJoinSplit[i];
-            for (uint8_t j = 0; j < jsdesc.commitments.size(); j++) {
-              const uint256& note_commitment = jsdesc.commitments[j];
-
-              // Increment existing witness until the end of the block
-              if (!nd->witnesses.empty()) {
-                nd->witnesses.front().append(note_commitment);
-              }
-
-              //Only needed for intial witness
-              if (nd->witnesses.empty()) {
-                sproutTree.append(note_commitment);
-
-                // If this is our note, witness it
-                if (hash == wtxHash) {
-                  JSOutPoint outPoint {hash, i, j};
-                  if (op == outPoint) {
-                    nd->witnesses.push_front(sproutTree.witness());
-                  }
+                if (!nd->nullifier) {
+                    ::ClearSingleNoteWitnessCache(nd);                    
                 }
-              }
-            }
-          }
-        }
 
-        nd->witnessHeight = pblockindex->nHeight;
-        UpdateSproutNullifierNoteMapWithTx(wtxItem.second);
-        nMinimumHeight = SproutWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-      }
+                if (!nd->witnesses.empty() && nd->witnessHeight > 0) {
+                    // Skip all functions for validated witness while witness only = true
+                    if (nd->witnessRootValidated && witnessOnly) {
+                        continue;
+                    }
 
-      for (mapSaplingNoteData_t::value_type& item : wtxItem.second.mapSaplingNoteData) {
+                    //Skip Validation when witness root has been validated
+                    if (nd->witnessRootValidated) {
+                        nMinimumHeight = SproutWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
+                        continue;
+                    }
 
-        auto op = item.first;
-        auto* nd = &(item.second);
-        CBlockIndex* pblockindex;
-        uint256 blockRoot;
-        uint256 witnessRoot;
+                    //Skip Validation when witness height is greater that block height
+                    if (nd->witnessHeight > pindex->nHeight - 1) {
+                        nMinimumHeight = SproutWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
+                        continue;
+                    }
 
-        if (!nd->nullifier)
-          ::ClearSingleNoteWitnessCache(nd);
-
-        if (!nd->witnesses.empty() && nd->witnessHeight > 0) {
-
-          //Skip all functions for validated witness while witness only = true
-          if (nd->witnessRootValidated && witnessOnly)
-            continue;
-
-          //Skip Validation when witness root has been validated
-          if (nd->witnessRootValidated) {
-            nMinimumHeight = SaplingWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-            continue;
-          }
-
-          //Skip Validation when witness height is greater that block height
-          if (nd->witnessHeight > pindex->nHeight - 1) {
-            nMinimumHeight = SaplingWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-            continue;
-          }
-
-          //Validate the witness at the witness height
-          witnessRoot = nd->witnesses.front().root();
-          pblockindex = chainActive[nd->witnessHeight];
-          blockRoot = pblockindex->hashFinalSaplingRoot;
-          if (witnessRoot == blockRoot) {
-            nd->witnessRootValidated = true;
-            nMinimumHeight = SaplingWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-            continue;
-          }
-        }
-
-        //Clear witness Cache for all other scenarios
-        pblockindex = chainActive[wtxHeight];
-        ::ClearSingleNoteWitnessCache(nd);
-
-        LogPrintf("Setting Inital Sapling Witness for tx %s, %i of %i\n", wtxHash.ToString(), nWitnessTxIncrement, nWitnessTotalTxCount);
-
-        SaplingMerkleTree saplingTree;
-        blockRoot = pblockindex->pprev->hashFinalSaplingRoot;
-        pcoinsTip->GetSaplingAnchorAt(blockRoot, saplingTree);
-
-        //Cycle through blocks and transactions building sapling tree until the commitment needed is reached
-        const CBlock* pblock;
-        CBlock block;
-        ReadBlockFromDisk(block, pblockindex, Params().GetConsensus());
-        pblock = &block;
-
-        for (const CTransaction& tx : block.vtx) {
-          auto hash = tx.GetHash();
-
-          // Sapling
-          for (uint32_t i = 0; i < tx.vShieldedOutput.size(); i++) {
-            const uint256& note_commitment = tx.vShieldedOutput[i].cmu;
-
-            // Increment existing witness until the end of the block
-            if (!nd->witnesses.empty()) {
-              nd->witnesses.front().append(note_commitment);
-            }
-
-            //Only needed for intial witness
-            if (nd->witnesses.empty()) {
-              saplingTree.append(note_commitment);
-
-              // If this is our note, witness it
-              if (hash == wtxHash) {
-                SaplingOutPoint outPoint {hash, i};
-                if (op == outPoint) {
-                  nd->witnesses.push_front(saplingTree.witness());
+                    //Validate the witness at the witness height
+                    witnessRoot = nd->witnesses.front().root();
+                    pblockindex = chainActive[nd->witnessHeight];
+                    blockRoot = pblockindex->hashFinalSproutRoot;
+                    if (witnessRoot == blockRoot) {
+                        nd->witnessRootValidated = true;
+                        nMinimumHeight = SproutWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
+                        continue;
+                    }
                 }
-              }
+
+                //Clear witness Cache for all other scenarios
+                pblockindex = chainActive[wtxHeight];
+                ::ClearSingleNoteWitnessCache(nd);
+
+                LogPrintf("Setting Inital Sprout Witness for tx %s, %i of %i\n", wtxHash.ToString(), nWitnessTxIncrement, nWitnessTotalTxCount);
+
+                SproutMerkleTree sproutTree;
+                blockRoot = pblockindex->pprev->hashFinalSproutRoot;
+                pcoinsTip->GetSproutAnchorAt(blockRoot, sproutTree);
+
+                //Cycle through blocks and transactions building sprout tree until the commitment needed is reached
+                const CBlock* pblock;
+                CBlock block;
+                ReadBlockFromDisk(block, pblockindex, Params().GetConsensus());
+                pblock = &block;
+
+                for (const CTransaction& tx : block.vtx) {
+                    uint256 hash = tx.GetHash();
+                    for (size_t i = 0; i < tx.vJoinSplit.size(); i++) {
+                        const JSDescription& jsdesc = tx.vJoinSplit[i];
+                        for (uint8_t j = 0; j < jsdesc.commitments.size(); j++) {
+                            const uint256& note_commitment = jsdesc.commitments[j];
+
+                            // Increment existing witness until the end of the block
+                            if (!nd->witnesses.empty()) {
+                                nd->witnesses.front().append(note_commitment);
+                            }
+
+                            //Only needed for intial witness
+                            if (nd->witnesses.empty()) {
+                                sproutTree.append(note_commitment);
+
+                                // If this is our note, witness it
+                                if (hash == wtxHash) {
+                                    JSOutPoint outPoint {hash, i, j};
+                                    if (op == outPoint) {
+                                        nd->witnesses.push_front(sproutTree.witness());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                nd->witnessHeight = pblockindex->nHeight;
+                UpdateSproutNullifierNoteMapWithTx(wtxItem.second);
+                nMinimumHeight = SproutWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
             }
-          }
+
+            // Sapling
+            for (mapSaplingNoteData_t::value_type& item : wtxItem.second.mapSaplingNoteData) {
+                SaplingOutPoint op = item.first;
+                SaplingNoteData* nd = &(item.second);
+                CBlockIndex* pblockindex;
+                uint256 blockRoot;
+                uint256 witnessRoot;
+
+                if (!nd->nullifier) {
+                    ::ClearSingleNoteWitnessCache(nd);
+                }
+
+                if (!nd->witnesses.empty() && nd->witnessHeight > 0) {
+                    // Skip all functions for validated witness while witness only = true
+                    if (nd->witnessRootValidated && witnessOnly) {
+                        continue;
+                    }
+
+                    // Skip Validation when witness root has been validated
+                    if (nd->witnessRootValidated) {
+                        nMinimumHeight = SaplingWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
+                        continue;
+                    }
+
+                    // Skip Validation when witness height is greater that block height
+                    if (nd->witnessHeight > pindex->nHeight - 1) {
+                        nMinimumHeight = SaplingWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
+                        continue;
+                    }
+
+                    // Validate the witness at the witness height
+                    witnessRoot = nd->witnesses.front().root();
+                    pblockindex = chainActive[nd->witnessHeight];
+                    blockRoot = pblockindex->hashFinalSaplingRoot;
+                    if (witnessRoot == blockRoot) {
+                        nd->witnessRootValidated = true;
+                        nMinimumHeight = SaplingWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
+                        continue;
+                    }
+                }
+
+                // Clear witness Cache for all other scenarios
+                pblockindex = chainActive[wtxHeight];
+                ::ClearSingleNoteWitnessCache(nd);
+
+                LogPrintf("Setting Inital Sapling Witness for tx %s, %i of %i\n", wtxHash.ToString(), nWitnessTxIncrement, nWitnessTotalTxCount);
+
+                SaplingMerkleTree saplingTree;
+                blockRoot = pblockindex->pprev->hashFinalSaplingRoot;
+                pcoinsTip->GetSaplingAnchorAt(blockRoot, saplingTree);
+
+                //Cycle through blocks and transactions building sapling tree until the commitment needed is reached
+                const CBlock* pblock;
+                CBlock block;
+                ReadBlockFromDisk(block, pblockindex, Params().GetConsensus());
+                pblock = &block;
+
+                for (const CTransaction& tx : block.vtx) {
+                    auto hash = tx.GetHash();
+
+                    // Sapling
+                    for (uint32_t i = 0; i < tx.vShieldedOutput.size(); i++) {
+                        const uint256& note_commitment = tx.vShieldedOutput[i].cmu;
+
+                        // Increment existing witness until the end of the block
+                        if (!nd->witnesses.empty()) {
+                            nd->witnesses.front().append(note_commitment);
+                        }
+
+                        // Only needed for intial witness
+                        if (nd->witnesses.empty()) {
+                            saplingTree.append(note_commitment);
+
+                            // If this is our note, witness it
+                            if (hash == wtxHash) {
+                                SaplingOutPoint outPoint {hash, i};
+                                if (op == outPoint) {
+                                    nd->witnesses.push_front(saplingTree.witness());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                nd->witnessHeight = pblockindex->nHeight;
+                UpdateSaplingNullifierNoteMapWithTx(wtxItem.second);
+                nMinimumHeight = SaplingWitnessMinimumHeight(nd->nullifier.value(), nd->witnessHeight, nMinimumHeight);
+            }
         }
-        nd->witnessHeight = pblockindex->nHeight;
-        UpdateSaplingNullifierNoteMapWithTx(wtxItem.second);
-        nMinimumHeight = SaplingWitnessMinimumHeight(*item.second.nullifier, nd->witnessHeight, nMinimumHeight);
-      }
     }
-  }
-  //enable z_sendmany when the wallet has no Notes
-  if (!walletHasNotes || nMinimumHeight == pindex->nHeight)
-    fInitWitnessesBuilt = true;
 
-  return nMinimumHeight;
+    //enable z_sendmany when the wallet has no Notes
+    if (!walletHasNotes || nMinimumHeight == pindex->nHeight) {
+        fInitWitnessesBuilt = true;
+    }
+
+    return nMinimumHeight;
 }
 
 void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly)
 {
+    LOCK2(cs_main, cs_wallet);
+    int startHeight = VerifyAndSetInitialWitness(pindex, witnessOnly) + 1;
 
-  LOCK2(cs_main, cs_wallet);
-
-  int startHeight = VerifyAndSetInitialWitness(pindex, witnessOnly) + 1;
-
-  if (startHeight > pindex->nHeight || witnessOnly) {
-    return;
-  }
-
-  //Disable RPC during IBD
-  if (IsInitialBlockDownload(Params().GetConsensus()) && !fInitWitnessesBuilt) {
-      fBuildingWitnessCache = true;
-  }
-
-  uint256 sproutRoot;
-  uint256 saplingRoot;
-  CBlockIndex* pblockindex = chainActive[startHeight];
-  int height = chainActive.Height();
-
-  //Show in UI
-  bool uiShown = false;
-  const CChainParams& chainParams = Params();
-  double dProgressStart = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pblockindex, false);
-  double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip(), false);
-
-  while (pblockindex) {
-
-    //exit loop if trying to shutdoen
-    if (ShutdownRequested()) {
-        break;
+    if (startHeight > pindex->nHeight || witnessOnly) {
+        return;
     }
 
-    if (pblockindex->nHeight % 1000 == 0 && pblockindex->nHeight < height - 5) {
-      if (!uiShown) {
-          uiShown = true;
-          uiInterface.ShowProgress("Building Witnesses", 0);
-      }
-      wb_progress = (int)((Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pblockindex, false) - dProgressStart) / (dProgressTip - dProgressStart) * 100);
-      uiInterface.ShowProgress((_("Building Witnesses for block") + strprintf(" %i ...", pblockindex->nHeight)).c_str(), std::max(1, std::min(99, wb_progress)));
-      uiInterface.InitMessage((_("Building Witnesses for block") + strprintf(" %i ... [ %i%% ]", pblockindex->nHeight, std::max(1, std::min(99, wb_progress)))).c_str());
-      LogPrintf("Building Witnesses for block %i ... [ %i%% ]", pblockindex->nHeight, std::max(1, std::min(99, wb_progress)));
+    //Disable RPC during IBD
+    if (IsInitialBlockDownload(Params().GetConsensus()) && !fInitWitnessesBuilt) {
+        fBuildingWitnessCache = true;
     }
 
-    SproutMerkleTree sproutTree;
-    sproutRoot = pblockindex->pprev->hashFinalSproutRoot;
-    pcoinsTip->GetSproutAnchorAt(sproutRoot, sproutTree);
+    uint256 sproutRoot;
+    uint256 saplingRoot;
+    CBlockIndex* pblockindex = chainActive[startHeight];
+    int height = chainActive.Height();
 
-    SaplingMerkleTree saplingTree;
-    saplingRoot = pblockindex->pprev->hashFinalSaplingRoot;
-    pcoinsTip->GetSaplingAnchorAt(saplingRoot, saplingTree);
+    //Show in UI
+    bool uiShown = false;
+    const CChainParams& chainParams = Params();
+    double dProgressStart = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pblockindex, false);
+    double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip(), false);
 
-    //Cycle through blocks and transactions building sapling tree until the commitment needed is reached
-    CBlock block;
-    ReadBlockFromDisk(block, pblockindex, Params().GetConsensus());
-
-    for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
-
-      if (wtxItem.second.mapSproutNoteData.empty() && wtxItem.second.mapSaplingNoteData.empty())
-        continue;
-
-      if (wtxItem.second.GetDepthInMainChain() > 0) {
-
-        //Sprout
-        for (mapSproutNoteData_t::value_type& item : wtxItem.second.mapSproutNoteData) {
-          auto* nd = &(item.second);
-          if (nd->nullifier && nd->witnessHeight == pblockindex->nHeight - 1
-              && GetSproutSpendDepth(*item.second.nullifier) <= WITNESS_CACHE_SIZE) {
-
-
-            nd->witnesses.push_front(nd->witnesses.front());
-            while (nd->witnesses.size() > WITNESS_CACHE_SIZE) {
-                nd->witnesses.pop_back();
+    while (pblockindex && !ShutdownRequested()) {
+        if (pblockindex->nHeight % 1000 == 0 && pblockindex->nHeight < height - 5) {
+            if (!uiShown) {
+                uiShown = true;
+                uiInterface.ShowProgress("Building Witnesses", 0);
             }
 
-            for (const CTransaction& tx : block.vtx) {
-              for (size_t i = 0; i < tx.vJoinSplit.size(); i++) {
-                const JSDescription& jsdesc = tx.vJoinSplit[i];
-                for (uint8_t j = 0; j < jsdesc.commitments.size(); j++) {
-                  const uint256& note_commitment = jsdesc.commitments[j];
-                  nd->witnesses.front().append(note_commitment);
+            wb_progress = (int)((Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pblockindex, false) - dProgressStart) / (dProgressTip - dProgressStart) * 100);
+            uiInterface.ShowProgress((_("Building Witnesses for block") + strprintf(" %i ...", pblockindex->nHeight)).c_str(), std::max(1, std::min(99, wb_progress)));
+            uiInterface.InitMessage((_("Building Witnesses for block") + strprintf(" %i ... [ %i%% ]", pblockindex->nHeight, std::max(1, std::min(99, wb_progress)))).c_str());
+            LogPrintf("Building Witnesses for block %i ... [ %i%% ]", pblockindex->nHeight, std::max(1, std::min(99, wb_progress)));
+        }
+
+        SproutMerkleTree sproutTree;
+        sproutRoot = pblockindex->pprev->hashFinalSproutRoot;
+        pcoinsTip->GetSproutAnchorAt(sproutRoot, sproutTree);
+
+        SaplingMerkleTree saplingTree;
+        saplingRoot = pblockindex->pprev->hashFinalSaplingRoot;
+        pcoinsTip->GetSaplingAnchorAt(saplingRoot, saplingTree);
+
+        //Cycle through blocks and transactions building sapling tree until the commitment needed is reached
+        CBlock block;
+        ReadBlockFromDisk(block, pblockindex, Params().GetConsensus());
+
+        for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
+            if (wtxItem.second.mapSproutNoteData.empty() && wtxItem.second.mapSaplingNoteData.empty()) {
+                continue;
+            }
+
+            if (wtxItem.second.GetDepthInMainChain() > 0) {
+                //Sprout
+                for (mapSproutNoteData_t::value_type& item : wtxItem.second.mapSproutNoteData) {
+                    SproutNoteData* nd = &(item.second);
+                    if (nd->nullifier && nd->witnessHeight == pblockindex->nHeight - 1
+                    && GetSproutSpendDepth(nd->nullifier.value()) <= WITNESS_CACHE_SIZE) {
+                        nd->witnesses.push_front(nd->witnesses.front());
+                        while (nd->witnesses.size() > WITNESS_CACHE_SIZE) {
+                            nd->witnesses.pop_back();
+                        }
+
+                        for (const CTransaction& tx : block.vtx) {
+                            for (const JSDescription& jsdesc : tx.vJoinSplit) {
+                                for (const uint256& note_commitment : jsdesc.commitments) {
+                                    nd->witnesses.front().append(note_commitment);
+                                }
+                            }
+                        }
+                        nd->witnessHeight = pblockindex->nHeight;
+                    }
                 }
-              }
+
+                //Sapling
+                for (mapSaplingNoteData_t::value_type& item : wtxItem.second.mapSaplingNoteData) {
+                    SaplingNoteData* nd = &(item.second);
+                    if (nd->nullifier && nd->witnessHeight == pblockindex->nHeight - 1
+                    && GetSaplingSpendDepth(nd->nullifier.value()) <= WITNESS_CACHE_SIZE) {
+                        nd->witnesses.push_front(nd->witnesses.front());
+                        while (nd->witnesses.size() > WITNESS_CACHE_SIZE) {
+                            nd->witnesses.pop_back();
+                        }
+
+                        for (const CTransaction& tx : block.vtx) {
+                            for (const OutputDescription& outdesc : tx.vShieldedOutput) {
+                                nd->witnesses.front().append(outdesc.cmu);
+                            }
+                        }
+                        nd->witnessHeight = pblockindex->nHeight;
+                    }
+                }
             }
-            nd->witnessHeight = pblockindex->nHeight;
-          }
         }
 
-        //Sapling
-        for (mapSaplingNoteData_t::value_type& item : wtxItem.second.mapSaplingNoteData) {
-          auto* nd = &(item.second);
-          if (nd->nullifier && nd->witnessHeight == pblockindex->nHeight - 1
-              && GetSaplingSpendDepth(*item.second.nullifier) <= WITNESS_CACHE_SIZE) {
-
-            nd->witnesses.push_front(nd->witnesses.front());
-            while (nd->witnesses.size() > WITNESS_CACHE_SIZE) {
-                nd->witnesses.pop_back();
-            }
-
-            for (const CTransaction& tx : block.vtx) {
-              for (uint32_t i = 0; i < tx.vShieldedOutput.size(); i++) {
-                const uint256& note_commitment = tx.vShieldedOutput[i].cmu;
-                nd->witnesses.front().append(note_commitment);
-              }
-            }
-            nd->witnessHeight = pblockindex->nHeight;
-          }
+        if (pblockindex == pindex) {
+            break;
         }
-      }
+
+        pblockindex = chainActive.Next(pblockindex);
     }
 
-    if (pblockindex == pindex)
-      break;
+    if (uiShown) {
+        uiInterface.ShowProgress(_("Witness Cache Complete..."), 100);
+    }
 
-    pblockindex = chainActive.Next(pblockindex);
-
-  }
-
-  if (uiShown) {
-      uiInterface.ShowProgress(_("Witness Cache Complete..."), 100);
-  }
-
-  fInitWitnessesBuilt = true;
-  fBuildingWitnessCache = false;
-
+    fInitWitnessesBuilt = true;
+    fBuildingWitnessCache = false;
 }
 
 bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
