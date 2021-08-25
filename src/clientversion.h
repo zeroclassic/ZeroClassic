@@ -17,8 +17,8 @@
 //! These need to be macros, as clientversion.cpp's and bitcoin*-res.rc's voodoo requires it
 #define CLIENT_VERSION_MAJOR 4
 #define CLIENT_VERSION_MINOR 4
-#define CLIENT_VERSION_REVISION 1
-#define CLIENT_VERSION_BUILD 50
+#define CLIENT_VERSION_REVISION 2
+#define CLIENT_VERSION_BUILD 25
 
 //! Set to true for release, false for prerelease or test build
 #define CLIENT_VERSION_IS_RELEASE true
@@ -47,7 +47,7 @@
 #define RC_COIN_NAME "ZeroClassic"
 #define RC_COIN_NAME_LOWERCASE "zeroclassic"
 #define RC_COIN_NICKNAME "zero"
-#define RC_COIN_CLIENT_NAME "Taipan"
+#define RC_COIN_CLIENT_NAME "Yozakura"
 #define RC_COIN_DAEMON_EXECUTABLE "zerod"
 #define RC_COIN_CLI_EXECUTABLE "zero-cli"
 #define RC_COIN_TX_EXECUTABLE "zero-tx" 
@@ -57,7 +57,7 @@
 #define RC_COIN_RPC_PORT_REGTEST 23903
 #define RC_COIN_CURRENCY_UNIT "ZERC"
 #define RC_COIN_MINOR_CURRENCY_UNIT "zeroshis"
-#define RC_APPROX_RELEASE_HEIGHT 1085000
+#define RC_APPROX_RELEASE_HEIGHT 1179000
 #define RC_MAX_OUTBOUND_CONNECTIONS 16
 
 
