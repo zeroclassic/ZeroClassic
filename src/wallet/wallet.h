@@ -796,6 +796,7 @@ private:
     int64_t nLastResend;
     int64_t nLastSetChain;
     int nSetChainUpdates;
+    int nDeletedTxes;
     bool fBroadcastTransactions;
 
     template <class T>
