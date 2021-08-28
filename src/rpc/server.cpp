@@ -507,13 +507,22 @@ UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params
 
     g_rpcSignals.PreCommand(*pcmd);
 
+    LogPrint("rpc", "enter method=%s\n", SanitizeString(strMethod));
     try
     {
         // Execute
-        return pcmd->actor(params, false);
+        UniValue ret = pcmd->actor(params, false);
+        LogPrint("rpc", "leave method=%s\n", SanitizeString(strMethod));
+        return ret;
+    }
+    catch (const UniValue& objError)
+    {
+        LogPrint("rpc", "failed method=%s\n", SanitizeString(strMethod));
+        throw objError;
     }
     catch (const std::exception& e)
     {
+        LogPrint("rpc", "failed method=%s\n", SanitizeString(strMethod));
         throw JSONRPCError(RPC_MISC_ERROR, e.what());
     }
 
