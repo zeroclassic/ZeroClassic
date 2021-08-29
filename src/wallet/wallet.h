@@ -874,13 +874,13 @@ protected:
 
     template <typename WalletDB>
     void SetBestChainINTERNAL(WalletDB& walletdb, const CBlockLocator& loc) {
-        AssertLockHeld(cs_wallet);
         if (!walletdb.TxnBegin()) {
             // This needs to be done atomically, so don't do it at all
             LogPrintf("SetBestChain(): Couldn't start atomic write\n");
             return;
         }
         try {
+            LOCK(cs_wallet);
             for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
                 auto wtx = wtxItem.second;
                 // We skip transactions for which mapSproutNoteData and mapSaplingNoteData
