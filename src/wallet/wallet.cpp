@@ -1449,7 +1449,7 @@ void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex)
         //Sprout
         for (auto& item : wtxItem.second.mapSproutNoteData) {
             auto* nd = &(item.second);
-            if (nd->nullifier && pwalletMain->GetSproutSpendDepth(*item.second.nullifier) <= WITNESS_CACHE_SIZE) {
+            if (nd->nullifier && GetSproutSpendDepth(nd->nullifier.value()) <= WITNESS_CACHE_SIZE) {
               // Only decrement witnesses that are not above the current height
                 if (nd->witnessHeight <= pindex->nHeight) {
                     if (nd->witnesses.size() > 1) {
@@ -1464,7 +1464,7 @@ void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex)
         //Sapling
         for (auto& item : wtxItem.second.mapSaplingNoteData) {
             auto* nd = &(item.second);
-            if (nd->nullifier && pwalletMain->GetSaplingSpendDepth(*item.second.nullifier) <= WITNESS_CACHE_SIZE) {
+            if (nd->nullifier && GetSaplingSpendDepth(nd->nullifier.value()) <= WITNESS_CACHE_SIZE) {
                 // Only decrement witnesses that are not above the current height
                 if (nd->witnessHeight <= pindex->nHeight) {
                     if (nd->witnesses.size() > 1) {
@@ -3538,12 +3538,9 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                 for (int i = 0; i < pwtx->vShieldedSpend.size(); i++)
                 {
                     const SpendDescription& spendDesc = pwtx->vShieldedSpend[i];
-                    //if (pwalletMain->IsSaplingNullifierFromMe(spendDesc.nullifier)) {
                     if (IsSaplingNullifierFromMe(spendDesc.nullifier))
                     {
-                        //const uint256& parentHash = pwalletMain->mapSaplingNullifiersToNotes[spendDesc.nullifier].hash;
                         const uint256& parentHash = mapSaplingNullifiersToNotes[spendDesc.nullifier].hash;
-                        //const CWalletTx* parent = pwalletMain->GetWalletTx(parentHash);
                         const CWalletTx* parent = GetWalletTx(parentHash);
                         if (parent != NULL && parentHash != wtxid)
                         {
@@ -3564,8 +3561,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                 for (auto & pair : pwtx->mapSproutNoteData)
                 {
                     SproutNoteData nd = pair.second;
-                    //if (!nd.nullifier || (pwalletMain->GetSproutSpendDepth(*nd.nullifier) - chainActive.Tip()->nHeight + pindex->nHeight) <= fDeleteTransactionsAfterNBlocks) {
-                    if (!nd.nullifier || GetSproutSpendDepth(*nd.nullifier) <= fDeleteTransactionsAfterNBlocks)
+                    if (!nd.nullifier || GetSproutSpendDepth(nd.nullifier.value()) <= fDeleteTransactionsAfterNBlocks)
                     {
                         LogPrint("deletetx","DeleteTx - Unspent sprout input tx %s\n", pwtx->GetHash().ToString());
                         deleteTx = false;
@@ -3585,13 +3581,9 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     const JSDescription& jsdesc = pwtx->vJoinSplit[i];
                     for (const uint256 &nullifier : jsdesc.nullifiers)
                     {
-                        // JSOutPoint op = pwalletMain->mapSproutNullifiersToNotes[nullifier];
-                        //if (pwalletMain->IsSproutNullifierFromMe(nullifier)) {
                         if (IsSproutNullifierFromMe(nullifier))
                         {
-                            //const uint256& parentHash = pwalletMain->mapSproutNullifiersToNotes[nullifier].hash;
                             const uint256& parentHash = mapSproutNullifiersToNotes[nullifier].hash;
-                            //const CWalletTx* parent = pwalletMain->GetWalletTx(parentHash);
                             const CWalletTx* parent = GetWalletTx(parentHash);
                             if (parent != NULL && parentHash != wtxid)
                             {
@@ -3636,8 +3628,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                 {
                     const CTxIn& txin = pwtx->vin[i];
                     const uint256& parentHash = txin.prevout.hash;
-                    //const CWalletTx* parent = pwalletMain->GetWalletTx(txin.prevout.hash);
-                    const CWalletTx* parent = GetWalletTx(txin.prevout.hash);
+                    const CWalletTx* parent = GetWalletTx(parentHash);
                     if (parent != NULL && parentHash != wtxid)
                     {
                         LogPrint("deletetx","DeleteTx - Parent of transparent tx %s found\n", pwtx->GetHash().ToString());
