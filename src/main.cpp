@@ -1730,8 +1730,11 @@ bool GetSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value)
     if (mempool.getSpentIndex(key, value))
         return true;
 
-    if (!pblocktree->ReadSpentIndex(key, value))
-        return error("Unable to get spent index information");
+    if (!pblocktree->ReadSpentIndex(key, value)) {
+        // return error("Unable to get spent index information");
+        // actually, this is not an error. Rather than that, it means that tx output (represented by the key) still hasn't been spent
+        return false; 
+    }
 
     return true;
 }
