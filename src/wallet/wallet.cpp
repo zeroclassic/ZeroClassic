@@ -1100,7 +1100,9 @@ bool CWallet::IsSproutSpent(const uint256& nullifier) const {
 }
 
 unsigned int CWallet::GetSproutSpendDepth(const uint256& nullifier) const {
-    LOCK(cs_main);    
+    AssertLockHeld(cs_main);
+    AssertLockHeld(cs_wallet);
+
     pair<TxNullifiers::const_iterator, TxNullifiers::const_iterator> range;
     range = mapTxSproutNullifiers.equal_range(nullifier);
 
@@ -1130,7 +1132,9 @@ bool CWallet::IsSaplingSpent(const uint256& nullifier) const {
 }
 
 unsigned int CWallet::GetSaplingSpendDepth(const uint256& nullifier) const {
-    LOCK(cs_main);
+    AssertLockHeld(cs_main);
+    AssertLockHeld(cs_wallet);
+
     pair<TxNullifiers::const_iterator, TxNullifiers::const_iterator> range;
     range = mapTxSaplingNullifiers.equal_range(nullifier);
 
@@ -1444,7 +1448,7 @@ void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex)
 
 void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex)
 {
-    LOCK(cs_wallet);
+    LOCK2(cs_main, cs_wallet);
     for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
         //Sprout
         for (auto& item : wtxItem.second.mapSproutNoteData) {
