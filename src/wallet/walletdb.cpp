@@ -526,7 +526,9 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             CValidationState state;
             auto verifier = ProofVerifier::Strict();
             if (!(CheckTransaction(wtx, state, verifier) && (wtx.GetHash() == hash) && state.IsValid()))
+            {
                 return false;
+            }
 
             // Undo serialize changes in 31600
             if (31404 <= wtx.fTimeReceivedIsTxTime && wtx.fTimeReceivedIsTxTime <= 31703)
@@ -1017,8 +1019,11 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                     // Leave other errors alone, if we try to fix them we might make things worse.
                     fNoncriticalErrors = true; // ... but do warn the user there is something wrong.
                     if (strType == "tx")
-                        // Rescan if there is a bad transaction record:
-                        SoftSetBoolArg("-rescan", true);
+                    {
+                        // Don't schedule rescan, because it won't update/remove bad wallet transaction which doesn't exist in the chain
+                        //SoftSetBoolArg("-rescan", true);
+                    }
+
                 }
             }
             if (!strErr.empty())
@@ -1179,13 +1184,13 @@ DBErrors CWalletDB::ZapWalletTx(CWallet* pwallet, vector<CWalletTx>& vWtx)
             return DB_CORRUPT;
     }
 
-    // erase each archive Nullier SaplingOutput set
+    // erase each archive Nullifier JSOutPoint set
     for (uint256& arcNullifier : vArcSproutNullifier) {
         if (!EraseArcSproutOp(arcNullifier))
             return DB_CORRUPT;
     }
 
-    // erase each archive Nullier SaplingOutput set
+    // erase each archive Nullifier SaplingOutPoint set
     for (uint256& arcNullifier : vArcSaplingNullifier) {
         if (!EraseArcSaplingOp(arcNullifier))
             return DB_CORRUPT;
@@ -1293,8 +1298,8 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
 
 bool CWalletDB::Compact(CDBEnv& dbenv, const std::string& strFile)
 {
-  bool fSuccess = dbenv.Compact(strFile);
-  return fSuccess;
+    bool fSuccess = dbenv.Compact(strFile);
+    return fSuccess;
 }
 //
 // Try to (very carefully!) recover wallet file if there is a problem.

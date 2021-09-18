@@ -826,6 +826,10 @@ private:
     void AddToSproutSpends(const uint256& nullifier, const uint256& wtxid);
     void AddToSaplingSpends(const uint256& nullifier, const uint256& wtxid);
     void AddToSpends(const uint256& wtxid);
+    void RemoveFromTransparentSpends(const uint256& wtxid);
+    void RemoveFromSproutSpends(const uint256& wtxid);
+    void RemoveFromSaplingSpends(const uint256& wtxid);
+    void RemoveFromSpends(const uint256& wtxid);
 
 public:
     /*
@@ -883,6 +887,7 @@ protected:
             LOCK(cs_wallet);
             for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
                 auto wtx = wtxItem.second;
+
                 // We skip transactions for which mapSproutNoteData and mapSaplingNoteData
                 // are empty. This covers transactions that have no Sprout or Sapling data
                 // (i.e. are purely transparent), as well as shielding and unshielding
@@ -1249,13 +1254,14 @@ public:
          std::vector<uint256> commitments,
          std::vector<std::optional<SproutWitness>>& witnesses,
          uint256 &final_anchor);
-    void ReorderWalletTransactions(std::map<std::pair<int,int>, CWalletTx*> &mapSorted, int64_t &maxOrderPos);
-    void UpdateWalletTransactionOrder(std::map<std::pair<int,int>, CWalletTx*> &mapSorted, bool resetOrder);
-    void DeleteTransactions(std::vector<uint256> &removeTxs);
+    void ReorderWalletTransactions(std::map<std::pair<int,int>, const uint256> &mapSorted, int64_t &maxOrderPos);
+    void UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const uint256> &mapSorted, bool resetOrder);
+    unsigned int DeleteTransactions(std::vector<uint256> &removeTxs, std::vector<uint256> &removeExpiredTxs);
     void DeleteWalletTransactions(const CBlockIndex* pindex);
     bool initalizeArcTx();
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false, bool fIgnoreBirthday = false);
     void ReacceptWalletTransactions();
+    void CheckWalletSanity(const std::string &tag);
     void ResendWalletTransactions(int64_t nBestBlockTime);
     std::vector<uint256> ResendWalletTransactionsBefore(int64_t nTime);
     CAmount GetBalance() const;
