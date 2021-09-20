@@ -3751,10 +3751,29 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                         }
                         else if (pwtx->IsCoinBase())
                         {
-                            //LogPrint("deletetx" ,"Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
-                            LogPrintf("Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
-                            removeExpiredTxs.push_back(wtxid);
-                            txConflictCount++;
+                            BlockMap::iterator mi_orphan = mapBlockIndex.find(pwtx->hashBlock);
+                            if (mi_orphan != mapBlockIndex.end())
+                            {
+                                CBlockIndex *pindex_orphan = mi_orphan->second;
+                                if (pindex->nHeight > pindex_orphan->nHeight + COINBASE_MATURITY)
+                                {
+                                    //LogPrint("deletetx", "Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
+                                    LogPrintf("Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
+                                    removeExpiredTxs.push_back(wtxid);
+                                    txConflictCount++;
+                                }
+                                else
+                                {
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                //LogPrint("deletetx", "Orphan coinbase wtx %s marked for immediate eviction\n", wtxid.ToString());
+                                LogPrintf("Orphan coinbase wtx %s marked for immediate eviction\n", wtxid.ToString());
+                                removeExpiredTxs.push_back(wtxid);
+                                txConflictCount++;
+                            }
                         }
                         else if (pwtx->nExpiryHeight == 0)
                         {
