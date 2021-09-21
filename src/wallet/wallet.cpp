@@ -2699,6 +2699,13 @@ std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> CWallet::FindMySap
         if (!found) {
             for (auto ivk_entry : mapSaplingIncomingViewingKeys) {
                 SaplingIncomingViewingKey ivk = ivk_entry.second;
+
+                // skip decryption with ivk if there is a corresponding fvk (decryption already tried above)
+                if (mapSaplingFullViewingKeys.find(ivk) != mapSaplingFullViewingKeys.end())
+                {
+                    continue;
+                }
+
                 auto result = SaplingNotePlaintext::decrypt(Params().GetConsensus(), height, output.encCiphertext, ivk, output.ephemeralKey, output.cmu);
                 if (!result) {
                     continue;
