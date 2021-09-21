@@ -53,7 +53,6 @@ bool bSpendZeroConfChange = DEFAULT_SPEND_ZEROCONF_CHANGE;
 bool fSendFreeTransactions = DEFAULT_SEND_FREE_TRANSACTIONS;
 bool fPayAtLeastCustomFee = true;
 
-int wb_progress;
 bool fTxDeleteEnabled = false;
 bool fTxConflictDeleteEnabled = false;
 int fDeleteInterval = DEFAULT_TX_DELETE_INTERVAL;
@@ -667,7 +666,7 @@ void CWallet::ChainTip(const CBlockIndex *pindex,
             if (pblock->GetBlockTime() > GetTime() - nMaxTipAge - 3600)
             {
                 BuildWitnessCache(pindex, false);
-            }            
+            }
         }
     }
     else
@@ -1840,6 +1839,7 @@ int CWallet::VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessO
 void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly)
 {
     LOCK2(cs_main, cs_wallet);
+    const Consensus::Params &consensus_params = Params().GetConsensus();
     int startHeight = VerifyAndSetInitialWitness(pindex, witnessOnly) + 1;
 
     if (startHeight > pindex->nHeight || witnessOnly)
@@ -1848,7 +1848,7 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly)
     }
 
     //Disable RPC during IBD
-    if (IsInitialBlockDownload(Params().GetConsensus()) || !fInitWitnessesBuilt)
+    if (IsInitialBlockDownload(consensus_params) || !fInitWitnessesBuilt)
     {
         fBuildingWitnessCache = true;
     }
@@ -1860,9 +1860,6 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly)
 
     //Show in UI
     bool uiShown = false;
-    const CChainParams& chainParams = Params();
-    double dProgressStart = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pblockindex, false);
-    double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip(), false);
 
     while (pblockindex)
     {
@@ -1872,7 +1869,7 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly)
             break;
         }
 
-        if (pblockindex->nHeight % 1000 == 0 && pblockindex->nHeight < height - 5)
+        if (pblockindex->nHeight % 1000 == 0 && pblockindex->nHeight <= height)
         {
             if (!uiShown)
             {
@@ -1880,10 +1877,10 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly)
                 uiInterface.ShowProgress("Building Witnesses", 0);
             }
 
-            wb_progress = (int)((Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pblockindex, false) - dProgressStart) / (dProgressTip - dProgressStart) * 100);
-            uiInterface.ShowProgress((_("Building Witnesses for block") + strprintf(" %i ...", pblockindex->nHeight)).c_str(), std::max(1, std::min(99, wb_progress)));
-            uiInterface.InitMessage((_("Building Witnesses for block") + strprintf(" %i ... [ %i%% ]", pblockindex->nHeight, std::max(1, std::min(99, wb_progress)))).c_str());
-            LogPrintf("Building Witnesses for block %i ... [ %i%% ]", pblockindex->nHeight, std::max(1, std::min(99, wb_progress)));
+            float wb_progress = (float)pblockindex->nHeight * 100 / height;
+            uiInterface.ShowProgress((_("Building Witnesses for block") + strprintf(" %i ...", pblockindex->nHeight)).c_str(), (int)wb_progress);
+            uiInterface.InitMessage((_("Building Witnesses for block") + strprintf(" %i ... [ %.2f%% ]", pblockindex->nHeight, wb_progress)).c_str());
+            LogPrintf("Building Witnesses for block %i ... [ %.2f%% ]", pblockindex->nHeight, wb_progress);
         }
 
         SproutMerkleTree sproutTree;
@@ -1896,7 +1893,7 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly)
 
         //Cycle through blocks and transactions building sapling tree until the commitment needed is reached
         CBlock block;
-        ReadBlockFromDisk(block, pblockindex, Params().GetConsensus());
+        ReadBlockFromDisk(block, pblockindex, consensus_params);
 
         for (std::pair<const uint256, CWalletTx> &wtxItem : mapWallet)
         {
