@@ -747,8 +747,8 @@ UniValue getrescaninfo(const UniValue& params, bool fHelp) {
     UniValue obj(UniValue::VOBJ);
 
     obj.pushKV("rescanning", (bool)pwalletMain->dRescanProgress);
-    if (pwalletMain->dRescanProgress != std::nullopt)
-        obj.pushKV("rescanprogress", *(pwalletMain->dRescanProgress));
+    if (pwalletMain->dRescanProgress)
+        obj.pushKV("rescanprogress", pwalletMain->dRescanProgress.value());
 
     return obj;
 }

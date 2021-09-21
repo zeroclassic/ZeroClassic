@@ -3965,7 +3965,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 {
     int ret = 0;
     int64_t nNow = GetTime();
-    const CChainParams& chainParams = Params();
+    //const CChainParams& chainParams = Params();
+    const Consensus::Params &consensus_params = Params().GetConsensus();
     CBlockIndex* pindex = pindexStart;
     std::set<uint256> txList;
     std::set<uint256> txListOriginal;
@@ -3994,26 +3995,24 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             pindex = chainActive.Next(pindex);
         }
 
-        ShowProgress(_("Rescanning..."), 0); // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
-        double dProgressStart = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false);
-        double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip(), false);
+        int tip_height = chainActive.Tip()->nHeight;
+        ShowProgress(_("Rescanning..."), 0);
+
         while (pindex)
         {
-            if (pindex->nHeight % 100 == 0 && dProgressTip - dProgressStart > 0.0)
+            if (pindex->nHeight % 100 == 0 && tip_height >= pindex->nHeight)
             {
                 LOCK(cs_rescan);
 
-                dRescanProgress = (Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false) - dProgressStart) / (dProgressTip - dProgressStart);
-                dRescanProgress = std::max(1.0, std::min(99.0, *dRescanProgress * 100));
-                ShowProgress(_("Rescanning..."), (int)(*dRescanProgress));
-
-                uiInterface.ShowProgress(_("Rescanning..."), (int)(*dRescanProgress));
-                uiInterface.InitMessage(_("Rescanning... ") + strprintf("[%i %s]", (int)(*dRescanProgress), "%").c_str());
+                dRescanProgress = (float)pindex->nHeight * 100 / tip_height;
+                ShowProgress(_("Rescanning..."), (int)(dRescanProgress.value()));
+                uiInterface.ShowProgress(_("Rescanning..."), (int)(dRescanProgress.value()));
+                uiInterface.InitMessage(_("Rescanning...") + strprintf(" [%.2f %%]", dRescanProgress.value()).c_str());
             }
 
             CBlock block;
             bool blockInvolvesMe = false;
-            ReadBlockFromDisk(block, pindex, Params().GetConsensus());
+            ReadBlockFromDisk(block, pindex, consensus_params);
             for (const CTransaction& tx : block.vtx)
             {
                 if (AddToWalletIfInvolvingMe(tx, &block, pindex->nHeight, fUpdate))
@@ -4030,7 +4029,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             // state on the path to the tip of our chain
             assert(pcoinsTip->GetSproutAnchorAt(pindex->hashSproutAnchor, sproutTree));
             if (pindex->pprev) {
-                if (Params().GetConsensus().NetworkUpgradeActive(pindex->pprev->nHeight,  Consensus::UPGRADE_SAPLING)) {
+                if (consensus_params.NetworkUpgradeActive(pindex->pprev->nHeight,  Consensus::UPGRADE_SAPLING)) {
                     assert(pcoinsTip->GetSaplingAnchorAt(pindex->pprev->hashFinalSaplingRoot, saplingTree));
                 }
             }
@@ -4044,28 +4043,14 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 
             //Delete Transactions
             if (pindex->nHeight % fDeleteInterval == 0)
-              DeleteWalletTransactions(pindex);
+                DeleteWalletTransactions(pindex);
 
             pindex = chainActive.Next(pindex);
             if (GetTime() >= nNow + 60) {
                 nNow = GetTime();
-                LogPrintf("Still rescanning. At block %d. Progress=%f [ %i wallet transactions ]\n", pindex->nHeight, Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex), mapWallet.size());
+                LogPrintf("Still rescanning. At block %d. Progress=%.2f [ %i wallet transactions ]\n", pindex->nHeight, (double)pindex->nHeight / tip_height, mapWallet.size());
             }
         }
-
-        /*
-        // After rescanning, persist Sapling note data that might have changed, e.g. nullifiers.
-        // Do not flush the wallet here for performance reasons.
-        CWalletDB walletdb(strWalletFile, "r+", false);
-        for (auto hash : myTxHashes) {
-            CWalletTx wtx = mapWallet[hash];
-            if (!wtx.mapSaplingNoteData.empty()) {
-                if (!walletdb.WriteTx(wtx)) {
-                    LogPrintf("Rescanning... WriteToDisk failed to update Sapling note data for: %s\n", hash.ToString());
-                }
-            }
-        }
-        */
          
         //Update all witness caches
         BuildWitnessCache(chainActive.Tip(), false);
