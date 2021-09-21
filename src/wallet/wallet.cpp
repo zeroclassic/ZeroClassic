@@ -3499,6 +3499,7 @@ void CWallet::WitnessNoteCommitment(std::vector<uint256> commitments,
         }
     }
 }
+
 /**
  * Reorder the transactions based on block height and block index.
  * Transactions can get out of order when they are deleted and subsequently
@@ -3532,7 +3533,6 @@ void CWallet::ReorderWalletTransactions(std::map<std::pair<int,int>, const uint2
         }
     }
 }
-
 
 /**Update the nOrderPos with passed in ordered map.
  */
@@ -3686,7 +3686,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     return;
                 }
             }
-            
+
             // delete transactions
             // Sort Transactions by block and block index
             int64_t maxOrderPos = 0;
