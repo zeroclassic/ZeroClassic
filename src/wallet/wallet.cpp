@@ -3609,7 +3609,7 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
                         RemoveFromSpends(txid_to_delete);
                     }
                     nRemoved++;
-                    LogPrintf("DeleteTransactions(): Expired wtx %s is deleted!\n", txid_to_delete.ToString());
+                    LogPrint("deletetx", "DeleteTransactions(): Expired wtx %s is deleted!\n", txid_to_delete.ToString());
                 }
                 else
                 {
@@ -3635,7 +3635,7 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
             if (walletdb.EraseTx(txid_to_delete))
             {
                 nRemoved++;
-                LogPrintf("DeleteTransactions(): Old wtx %s is deleted!\n", txid_to_delete.ToString());
+                LogPrint("deletetx", "DeleteTransactions(): Old wtx %s is deleted!\n", txid_to_delete.ToString());
             }
             else
             {
@@ -3741,8 +3741,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     {
                         if (IsExpiredTx(*pwtx, pindex->nHeight))
                         {
-                            //LogPrint("deletetx", "Expired wtx %s marked for eviction\n", wtxid.ToString());
-                            LogPrintf("Expired wtx %s marked for eviction\n", wtxid.ToString());
+                            LogPrint("deletetx", "Expired wtx %s marked for eviction\n", wtxid.ToString());
                             removeExpiredTxs.push_back(wtxid);
                             txConflictCount++;
                         }
@@ -3754,8 +3753,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                                 CBlockIndex *pindex_orphan = mi_orphan->second;
                                 if (pindex->nHeight > pindex_orphan->nHeight + COINBASE_MATURITY)
                                 {
-                                    //LogPrint("deletetx", "Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
-                                    LogPrintf("Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
+                                    LogPrint("deletetx", "Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
                                     removeExpiredTxs.push_back(wtxid);
                                     txConflictCount++;
                                 }
@@ -3766,8 +3764,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                             }
                             else
                             {
-                                //LogPrint("deletetx", "Orphan coinbase wtx %s marked for immediate eviction\n", wtxid.ToString());
-                                LogPrintf("Orphan coinbase wtx %s marked for immediate eviction\n", wtxid.ToString());
+                                LogPrint("deletetx", "Orphan coinbase wtx %s marked for immediate eviction\n", wtxid.ToString());
                                 removeExpiredTxs.push_back(wtxid);
                                 txConflictCount++;
                             }
