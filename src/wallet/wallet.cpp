@@ -3555,7 +3555,9 @@ void CWallet::UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const ui
     for (const auto &it : mapSorted)
     {
         const uint256 wtxid = it.second;
-        const CWalletTx wtx = mapWallet[wtxid];
+        const auto itmw = mapWallet.find(wtxid);
+        assert (itmw != mapWallet.end());
+        const CWalletTx wtx = itmw->second;
 
         if (wtx.nOrderPos <= previousPosition || resetOrder)
         {
@@ -3574,9 +3576,11 @@ void CWallet::UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const ui
     {
         const uint256 wtxid = it.first;
         LogPrint("deletetx","Reorder Tx - Updating Positon to %i for Tx %s\n ", it.second, wtxid.ToString());
-        mapWallet[wtxid].nOrderPos = it.second;
-        walletdb.WriteTx(mapWallet[wtxid]);
-        walletdb.WriteArcTx(mapWallet[wtxid]);
+        auto itmw = mapWallet.find(wtxid);
+        assert (itmw != mapWallet.end());
+        itmw->second.nOrderPos = it.second;
+        walletdb.WriteTx(itmw->second);
+        walletdb.WriteArcTx(itmw->second);
     }
 
     // Update Next Wallet Tx Positon
@@ -3604,7 +3608,9 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
     // Expired, conflicted, orphaned
     for (const uint256& txid_to_delete : removeExpiredTxs)
     {
-        bool fRemoveFromSpends = !(mapWallet.at(txid_to_delete).IsCoinBase());
+        auto itmw = mapWallet.find(txid_to_delete);
+        assert (itmw != mapWallet.end());
+        bool fRemoveFromSpends = !(itmw->second.IsCoinBase());
         if (mapWallet.erase(txid_to_delete))
         {
             if (walletdb.EraseTx(txid_to_delete))
@@ -3718,7 +3724,9 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
             for (auto &item : mapSorted)
             {
                 const uint256 wtxid = item.second;
-                const CWalletTx *pwtx = &(mapWallet[wtxid]); 
+                auto itmw = mapWallet.find(wtxid);
+                assert (itmw != mapWallet.end());
+                const CWalletTx *pwtx = &(itmw->second); 
 
                 bool deleteTx = true;
                 txCount += 1;
@@ -3811,7 +3819,9 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     {
                         if (IsSaplingNullifierFromMe(spendDesc.nullifier))
                         {
-                            const uint256 &parentHash = mapSaplingNullifiersToNotes[spendDesc.nullifier].hash;
+                            const auto itmsntn = mapSaplingNullifiersToNotes.find(spendDesc.nullifier);
+                            assert (itmsntn != mapSaplingNullifiersToNotes.end());
+                            const uint256 &parentHash = itmsntn->second.hash;
                             const CWalletTx *parent = GetWalletTx(parentHash);
                             if (parent != NULL && parentHash != wtxid)
                             {
@@ -3851,7 +3861,9 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                         {
                             if (IsSproutNullifierFromMe(nullifier))
                             {
-                                const uint256 &parentHash = mapSproutNullifiersToNotes[nullifier].hash;
+                                const auto itmsn2n = mapSproutNullifiersToNotes.find(nullifier);
+                                assert (itmsn2n != mapSproutNullifiersToNotes.end());
+                                const uint256 &parentHash = itmsn2n->second.hash;
                                 const CWalletTx *parent = GetWalletTx(parentHash);
                                 if (parent != NULL && parentHash != wtxid)
                                 {
