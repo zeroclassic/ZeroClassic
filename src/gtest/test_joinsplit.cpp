@@ -319,11 +319,11 @@ TEST(Joinsplit, FullApiTest)
         increment_note_witnesses(note1.cm(), witnesses, tree);
         SproutNote note2(addr.a_pk, 100, random_uint256(), random_uint256());
         increment_note_witnesses(note2.cm(), witnesses, tree);
-        SproutNote note3(addr.a_pk, 2100000000000001, random_uint256(), random_uint256());
+        SproutNote note3(addr.a_pk, 27156000000000001, random_uint256(), random_uint256());
         increment_note_witnesses(note3.cm(), witnesses, tree);
-        SproutNote note4(addr.a_pk, 1900000000000000, random_uint256(), random_uint256());
+        SproutNote note4(addr.a_pk, 19000000000000000, random_uint256(), random_uint256());
         increment_note_witnesses(note4.cm(), witnesses, tree);
-        SproutNote note5(addr.a_pk, 1900000000000000, random_uint256(), random_uint256());
+        SproutNote note5(addr.a_pk, 19000000000000000, random_uint256(), random_uint256());
         increment_note_witnesses(note5.cm(), witnesses, tree);
 
         // Should work
@@ -350,7 +350,7 @@ TEST(Joinsplit, FullApiTest)
             JSOutput(),
             JSOutput()
         },
-        2100000000000001,
+        27156000000000001,
         0,
         tree.root(),
         "nonsensical vpub_old value");
@@ -366,7 +366,7 @@ TEST(Joinsplit, FullApiTest)
             JSOutput()
         },
         0,
-        2100000000000001,
+        27156000000000001,
         tree.root(),
         "nonsensical vpub_new value");
 
@@ -467,7 +467,7 @@ TEST(Joinsplit, FullApiTest)
             JSInput()
         },
         {
-            JSOutput(addr, 2100000000000001),
+            JSOutput(addr, 27156000000000001),
             JSOutput()
         },
         0,
@@ -482,8 +482,8 @@ TEST(Joinsplit, FullApiTest)
             JSInput()
         },
         {
-            JSOutput(addr, 1900000000000000),
-            JSOutput(addr, 1900000000000000)
+            JSOutput(addr, 19000000000000000),
+            JSOutput(addr, 19000000000000000)
         },
         0,
         0,

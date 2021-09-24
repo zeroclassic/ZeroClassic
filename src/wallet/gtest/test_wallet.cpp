@@ -30,6 +30,7 @@ public:
     MOCK_METHOD0(TxnAbort, bool());
 
     MOCK_METHOD1(WriteTx, bool(const CWalletTx& wtx));
+    MOCK_METHOD1(WriteArcTx, bool(const CWalletTx& wtx));
     MOCK_METHOD1(WriteWitnessCacheSize, bool(int64_t nWitnessCacheSize));
     MOCK_METHOD1(WriteBestBlock, bool(const CBlockLocator& loc));
 };
@@ -57,6 +58,9 @@ public:
     }
     void DecrementNoteWitnesses(const CBlockIndex* pindex) {
         CWallet::DecrementNoteWitnesses(pindex);
+    }
+    void DecrementNoteWitnessesOriginal(const CBlockIndex* pindex) {
+        CWallet::DecrementNoteWitnessesOriginal(pindex);
     }
     void SetBestChain(MockWalletDB& walletdb, const CBlockLocator& loc) {
         CWallet::SetBestChainINTERNAL(walletdb, loc);
@@ -678,7 +682,7 @@ TEST(WalletTests, GetConflictedSaplingNotes) {
 
         // Simulate receiving new block and ChainTip signal
         wallet.IncrementNoteWitnesses(&fakeIndex, &block, sproutTree, saplingTree);
-        wallet.UpdateSaplingNullifierNoteMapForBlock(&block);
+        wallet.UpdateNullifierNoteMapForBlock(&block);
 
         // Retrieve the updated wtx from wallet
         uint256 hash = wtx.GetHash();
@@ -936,7 +940,7 @@ TEST(WalletTests, NavigateFromSaplingNullifierToNote) {
 
     // Simulate receiving new block and ChainTip signal
     wallet.IncrementNoteWitnesses(&fakeIndex, &block, sproutTree, testNote.tree);
-    wallet.UpdateSaplingNullifierNoteMapForBlock(&block);
+    wallet.UpdateNullifierNoteMapForBlock(&block);
 
     // Retrieve the updated wtx from wallet
     uint256 hash = wtx.GetHash();
@@ -1055,7 +1059,7 @@ TEST(WalletTests, SpentSaplingNoteIsFromMe) {
         // This triggers calculation of nullifiers for notes belonging to this wallet
         // in the output descriptions of wtx.
         wallet.IncrementNoteWitnesses(&fakeIndex, &block, sproutTree, saplingTree);
-        wallet.UpdateSaplingNullifierNoteMapForBlock(&block);
+        wallet.UpdateNullifierNoteMapForBlock(&block);
 
         // Retrieve the updated wtx from wallet
         wtx = wallet.mapWallet[wtx.GetHash()];
@@ -1199,7 +1203,7 @@ TEST(WalletTests, CachedWitnessesEmptyChain) {
     EXPECT_TRUE((bool) saplingWitnesses[0]);
 
     // Until #1302 is implemented, this should triggger an assertion
-    EXPECT_DEATH(wallet.DecrementNoteWitnesses(&index),
+    EXPECT_DEATH(wallet.DecrementNoteWitnessesOriginal(&index),
                  ".*nWitnessCacheSize > 0.*");
 }
 
@@ -1272,7 +1276,7 @@ TEST(WalletTests, CachedWitnessesChainTip) {
         EXPECT_NE(anchors1.second, anchors2.second);
 
         // Decrementing should give us the previous anchor
-        wallet.DecrementNoteWitnesses(&index2);
+        wallet.DecrementNoteWitnessesOriginal(&index2);
         auto anchors3 = GetWitnessesAndAnchors(wallet, sproutNotes, saplingNotes, sproutWitnesses, saplingWitnesses);
 
         EXPECT_FALSE((bool) sproutWitnesses[0]);
@@ -1850,7 +1854,7 @@ TEST(WalletTests, UpdatedSaplingNoteData) {
 
     // Simulate receiving new block and ChainTip signal
     wallet.IncrementNoteWitnesses(&fakeIndex, &block, sproutTree, testNote.tree);
-    wallet.UpdateSaplingNullifierNoteMapForBlock(&block);
+    wallet.UpdateNullifierNoteMapForBlock(&block);
 
     // Retrieve the updated wtx from wallet
     uint256 hash = wtx.GetHash();
@@ -1997,7 +2001,7 @@ TEST(WalletTests, MarkAffectedSaplingTransactionsDirty) {
 
     // Simulate receiving new block and ChainTip signal
     wallet.IncrementNoteWitnesses(&fakeIndex, &block, sproutTree, saplingTree);
-    wallet.UpdateSaplingNullifierNoteMapForBlock(&block);
+    wallet.UpdateNullifierNoteMapForBlock(&block);
 
     // Retrieve the updated wtx from wallet
     uint256 hash = wtx.GetHash();

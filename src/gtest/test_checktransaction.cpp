@@ -228,9 +228,9 @@ TEST(ChecktransactionTests, OversizeSaplingTxns) {
     // Transaction just under the limit
     mtx.vin[0].scriptSig = CScript();
     std::vector<unsigned char> vchData(520);
-    for (unsigned int i = 0; i < 3809; ++i)
+    for (unsigned int i = 0; i < 7626; ++i)
         mtx.vin[0].scriptSig << vchData << OP_DROP;
-    std::vector<unsigned char> vchDataRemainder(453);
+    std::vector<unsigned char> vchDataRemainder(345);
     mtx.vin[0].scriptSig << vchDataRemainder << OP_DROP;
     mtx.vin[0].scriptSig << OP_1;
 
@@ -770,15 +770,6 @@ TEST(ChecktransactionTests, OverwinterExpiryHeight) {
     }
 }
 
-TEST(checktransaction_tests, BlossomExpiryHeight) {
-    const Consensus::Params& params = RegtestActivateBlossom(false, 100).GetConsensus();
-    CMutableTransaction preBlossomMtx = CreateNewContextualCMutableTransaction(params, 99);
-    EXPECT_EQ(preBlossomMtx.nExpiryHeight, 100 - 1);
-    CMutableTransaction blossomMtx = CreateNewContextualCMutableTransaction(params, 100);
-    EXPECT_EQ(blossomMtx.nExpiryHeight, 100 + 40);
-    RegtestDeactivateBlossom();
-}
-
 // Test that a Sprout tx with a negative version number is detected
 // given the new Overwinter logic
 TEST(ChecktransactionTests, SproutTxVersionTooLow) {
@@ -1002,19 +993,19 @@ TEST(ChecktransactionTests, OverwinteredContextualCreateTx) {
         1, false, 0, 0);
     // Overwinter activates
     ContextualCreateTxCheck(params, overwinterActivationHeight,
-        OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, overwinterActivationHeight + DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA);
+        OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, overwinterActivationHeight + DEFAULT_TX_EXPIRY_DELTA);
     // Close to Sapling activation
-    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA - 2,
+    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_TX_EXPIRY_DELTA - 2,
         OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, saplingActivationHeight - 2);
-    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA - 1,
+    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_TX_EXPIRY_DELTA - 1,
         OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, saplingActivationHeight - 1);
-    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA,
+    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_TX_EXPIRY_DELTA,
         OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, saplingActivationHeight - 1);
-    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA + 1,
+    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_TX_EXPIRY_DELTA + 1,
         OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, saplingActivationHeight - 1);
-    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA + 2,
+    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_TX_EXPIRY_DELTA + 2,
         OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, saplingActivationHeight - 1);
-    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA + 3,
+    ContextualCreateTxCheck(params, saplingActivationHeight - DEFAULT_TX_EXPIRY_DELTA + 3,
         OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, saplingActivationHeight - 1);
     // Just before Sapling activation
     ContextualCreateTxCheck(params, saplingActivationHeight - 4,
@@ -1027,7 +1018,7 @@ TEST(ChecktransactionTests, OverwinteredContextualCreateTx) {
         OVERWINTER_TX_VERSION, true, OVERWINTER_VERSION_GROUP_ID, saplingActivationHeight - 1);
     // Sapling activates
     ContextualCreateTxCheck(params, saplingActivationHeight,
-        SAPLING_TX_VERSION, true, SAPLING_VERSION_GROUP_ID, saplingActivationHeight + DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA);
+        SAPLING_TX_VERSION, true, SAPLING_VERSION_GROUP_ID, saplingActivationHeight + DEFAULT_TX_EXPIRY_DELTA);
 
     // Revert to default
     RegtestDeactivateSapling();

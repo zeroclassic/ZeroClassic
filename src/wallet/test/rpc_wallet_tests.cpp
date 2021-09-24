@@ -2152,20 +2152,9 @@ BOOST_AUTO_TEST_CASE(rpc_gettransaction_status_sapling)
 {
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    TestWTxStatus(RegtestActivateSapling(), DEFAULT_PRE_BLOSSOM_TX_EXPIRY_DELTA);
+    TestWTxStatus(RegtestActivateSapling(), DEFAULT_TX_EXPIRY_DELTA);
 
     RegtestDeactivateSapling();
 }
-
-BOOST_AUTO_TEST_CASE(rpc_gettransaction_status_blossom)
-{
-    LOCK2(cs_main, pwalletMain->cs_wallet);
-    auto params = RegtestActivateBlossom(true).GetConsensus();
-
-    TestWTxStatus(params, DEFAULT_POST_BLOSSOM_TX_EXPIRY_DELTA);
-
-    RegtestDeactivateBlossom();
-}
-
 
 BOOST_AUTO_TEST_SUITE_END()

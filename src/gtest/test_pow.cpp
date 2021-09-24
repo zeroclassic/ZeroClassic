@@ -93,9 +93,11 @@ TEST(PoW, MinDifficultyRules) {
     std::vector<CBlockIndex> blocks(lastBlk+1);
     for (int i = 0; i <= lastBlk; i++) {
         blocks[i].pprev = i ? &blocks[i - 1] : nullptr;
-        blocks[i].nHeight = params.nPowAllowMinDifficultyBlocksAfterHeight.value() + i;
+        //blocks[i].nHeight = params.nPowAllowMinDifficultyBlocksAfterHeight.value() + i;
+        blocks[i].nHeight = 100 + i;
         blocks[i].nTime = i ? blocks[i - 1].nTime + params.PoWTargetSpacing(i) : 1269211443;
-        blocks[i].nBits = 0x1e7fffff; /* target 0x007fffff000... */
+        //blocks[i].nBits = 0x1e7fffff; /* target 0x007fffff000... */
+        blocks[i].nBits = 0x200effff; /* target 0x0effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff */
         blocks[i].nChainWork = i ? blocks[i - 1].nChainWork + GetBlockProof(blocks[i - 1]) : arith_uint256(0);
     }
 
@@ -105,7 +107,7 @@ TEST(PoW, MinDifficultyRules) {
 
     // Result should be unchanged, modulo integer division precision loss
     arith_uint256 bnRes;
-    bnRes.SetCompact(0x1e7fffff);
+    bnRes.SetCompact(0x200effff);
     bnRes /= params.AveragingWindowTimespan(blocks[lastBlk].nHeight + 1);
     bnRes *= params.AveragingWindowTimespan(blocks[lastBlk].nHeight + 1);
     EXPECT_EQ(GetNextWorkRequired(&blocks[lastBlk], &next, params), bnRes.GetCompact());
@@ -119,7 +121,7 @@ TEST(PoW, MinDifficultyRules) {
     // Delay last block over the min-difficulty limit
     next.nTime += 1;
 
-    // Result should be the minimum difficulty
-    EXPECT_EQ(GetNextWorkRequired(&blocks[lastBlk], &next, params),
+    // Result should not be the minimum difficulty, nPowAllowMinDifficultyBlocksAfterHeight = std::nullopt on ZeroClassic testnet
+    EXPECT_LE(GetNextWorkRequired(&blocks[lastBlk], &next, params),
               UintToArith256(params.powLimit).GetCompact());
 }
