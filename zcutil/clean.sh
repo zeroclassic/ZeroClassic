@@ -26,7 +26,7 @@ rm -f qa/pull-tester/tests-config.sh
 
 rm -f src/fuzz.cpp
 
-rm -rf test_bitcoin.coverage/ zcash-gtest.coverage/ total.coverage/
+rm -rf test_bitcoin.coverage/ zero-gtest.coverage/ total.coverage/
 
 rm -rf cache
 rm -rf target
