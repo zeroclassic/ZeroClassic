@@ -6,6 +6,7 @@ $(package)_sha256_hash=$(boost_sha256_hash)
 $(package)_build_subdir=tools/build/src/engine
 
 ifneq ($(ZERC_TOOLCHAIN), GCC)
+  $(package)_dependencies=native_clang
   $(package)_toolset_$(host_os)=clang
 else
   $(package)_toolset_$(host_os)=gcc
