@@ -874,6 +874,7 @@ protected:
     /**
      * pindex is the old tip being disconnected.
      */
+    void DecrementNoteWitnessesOriginal(const CBlockIndex* pindex);
     void DecrementNoteWitnesses(const CBlockIndex* pindex);
 
     template <typename WalletDB>
@@ -895,11 +896,6 @@ protected:
                 if (!(wtx.mapSproutNoteData.empty() && wtx.mapSaplingNoteData.empty())) {
                     if (!walletdb.WriteTx(wtx)) {
                         LogPrintf("SetBestChain(): Failed to write CWalletTx, aborting atomic write\n");
-                        walletdb.TxnAbort();
-                        return;
-                    }
-                    if (!walletdb.WriteArcTx(wtx)) {
-                        LogPrintf("SetBestChain(): Failed to write ArchiveTxPoint, aborting atomic write\n");
                         walletdb.TxnAbort();
                         return;
                     }
