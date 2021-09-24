@@ -30,9 +30,9 @@ BOOST_AUTO_TEST_CASE(get_next_work)
 }
 
 
-BOOST_AUTO_TEST_CASE(get_next_work_blossom)
+BOOST_AUTO_TEST_CASE(get_next_work_heartwood)
 {
-    const Consensus::Params& params = RegtestActivateBlossom(true).GetConsensus();
+    const Consensus::Params& params = RegtestActivateHeartwood(true);
     BOOST_CHECK_EQUAL(75, params.PoWTargetSpacing(0));
 
     int64_t nLastRetargetTime = 1000000000; // NOTE: Not an actual block time
@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(get_next_work_blossom)
     BOOST_CHECK_GT(0x1d011998,
                    CalculateNextWorkRequired(bnAvg, nThisTime, nLastRetargetTime, params, 0));
 
-    RegtestDeactivateBlossom();
+    RegtestDeactivateHeartwood();
 }
 
 /* Test the constraint on the upper bound for next work */
@@ -59,9 +59,9 @@ BOOST_AUTO_TEST_CASE(get_next_work_pow_limit)
                       CalculateNextWorkRequired(bnAvg, nThisTime, nLastRetargetTime, params, 0));
 }
 
-BOOST_AUTO_TEST_CASE(get_next_work_pow_limit_blossom)
+BOOST_AUTO_TEST_CASE(get_next_work_pow_limit_heartwood)
 {
-    const Consensus::Params& params = RegtestActivateBlossom(true).GetConsensus();
+    const Consensus::Params& params = RegtestActivateHeartwood(true);
 
     int64_t nLastRetargetTime = 1231006505;
     int64_t nThisTime = 1233061996;
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(get_next_work_pow_limit_blossom)
     BOOST_CHECK_EQUAL(0x1f07ffff,
                       CalculateNextWorkRequired(bnAvg, nThisTime, nLastRetargetTime, params, 0));
 
-    RegtestDeactivateBlossom();
+    RegtestDeactivateHeartwood();
 }
 
 /* Test the constraint on the lower bound for actual time taken */
@@ -89,9 +89,9 @@ BOOST_AUTO_TEST_CASE(get_next_work_lower_limit_actual)
                       CalculateNextWorkRequired(bnAvg, nThisTime, nLastRetargetTime, params, 0));
 }
 
-BOOST_AUTO_TEST_CASE(get_next_work_lower_limit_actual_blossom)
+BOOST_AUTO_TEST_CASE(get_next_work_lower_limit_actual_heartwood)
 {
-    const Consensus::Params& params = RegtestActivateBlossom(true).GetConsensus();
+    const Consensus::Params& params = RegtestActivateHeartwood(true);
 
     int64_t nLastRetargetTime = 1000000000; // NOTE: Not an actual block time
     int64_t nThisTime = 1000000458;
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(get_next_work_lower_limit_actual_blossom)
     BOOST_CHECK_EQUAL(0x1c04bceb,
                       CalculateNextWorkRequired(bnAvg, nThisTime, nLastRetargetTime, params, 0));
 
-    RegtestDeactivateBlossom();
+    RegtestDeactivateHeartwood();
 }
 
 /* Test the constraint on the upper bound for actual time taken */
@@ -118,9 +118,9 @@ BOOST_AUTO_TEST_CASE(get_next_work_upper_limit_actual)
                       CalculateNextWorkRequired(bnAvg, nThisTime, nLastRetargetTime, params, 0));
 }
 
-BOOST_AUTO_TEST_CASE(get_next_work_upper_limit_actual_blossom)
+BOOST_AUTO_TEST_CASE(get_next_work_upper_limit_actual_heartwood)
 {
-    const Consensus::Params& params = RegtestActivateBlossom(true).GetConsensus();
+    const Consensus::Params& params = RegtestActivateHeartwood(true);
 
     int64_t nLastRetargetTime = 1000000000; // NOTE: Not an actual block time
     int64_t nThisTime = 1000002908;
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(get_next_work_upper_limit_actual_blossom)
     BOOST_CHECK_EQUAL(0x1c4a93bb,
                       CalculateNextWorkRequired(bnAvg, nThisTime, nLastRetargetTime, params, 0));
 
-    RegtestDeactivateBlossom();
+    RegtestDeactivateHeartwood();
 }
 
 void GetBlockProofEquivalentTimeImpl(const Consensus::Params& params) {
@@ -158,10 +158,10 @@ BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test)
     GetBlockProofEquivalentTimeImpl(Params().GetConsensus());
 }
 
-BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test_blossom)
+BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test_heartwood)
 {
-    GetBlockProofEquivalentTimeImpl(RegtestActivateBlossom(true).GetConsensus());
-    RegtestDeactivateBlossom();
+    GetBlockProofEquivalentTimeImpl(RegtestActivateHeartwood(true));
+    RegtestDeactivateHeartwood();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

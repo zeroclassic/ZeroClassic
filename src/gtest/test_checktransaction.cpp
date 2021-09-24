@@ -538,12 +538,11 @@ TEST(ChecktransactionTests, JoinsplitSignatureDetectsOldBranchId) {
     SelectParams(CBaseChainParams::REGTEST);
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_OVERWINTER, 1);
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_SAPLING, 1);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_BLOSSOM, 10);
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_HEARTWOOD, 20);
     auto chainparams = Params();
 
     auto saplingBranchId = NetworkUpgradeInfo[Consensus::UPGRADE_SAPLING].nBranchId;
-    auto blossomBranchId = NetworkUpgradeInfo[Consensus::UPGRADE_BLOSSOM].nBranchId;
+    auto heartwoodBranchId = NetworkUpgradeInfo[Consensus::UPGRADE_HEARTWOOD].nBranchId;
 
     // Create a valid transaction for the Sapling epoch.
     CMutableTransaction mtx = GetValidTransaction(saplingBranchId);
@@ -555,31 +554,21 @@ TEST(ChecktransactionTests, JoinsplitSignatureDetectsOldBranchId) {
         tx, state, chainparams, 5, false,
         [](const Consensus::Params&) { return false; }));
 
-    // Attempt to validate the inputs against Blossom. We should be notified
+    // Attempt to validate the inputs against Heartwood. We should be notified
     // that an old consensus branch ID was used for an input.
     EXPECT_CALL(state, DoS(
         10, false, REJECT_INVALID,
         strprintf("old-consensus-branch-id (Expected %s, found %s)",
-            HexInt(blossomBranchId),
+            HexInt(heartwoodBranchId),
             HexInt(saplingBranchId)),
         false)).Times(1);
-    EXPECT_FALSE(ContextualCheckTransaction(
-        tx, state, chainparams, 15, false,
-        [](const Consensus::Params&) { return false; }));
-
-    // Attempt to validate the inputs against Heartwood. All we should learn is
-    // that the signature is invalid, because we don't check more than one
-    // network upgrade back.
-    EXPECT_CALL(state, DoS(
-        10, false, REJECT_INVALID,
-        "bad-txns-invalid-joinsplit-signature", false)).Times(1);
     EXPECT_FALSE(ContextualCheckTransaction(
         tx, state, chainparams, 25, false,
         [](const Consensus::Params&) { return false; }));
 
     // Revert to default
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_HEARTWOOD, Consensus::NetworkUpgrade::NO_ACTIVATION_HEIGHT);
-    RegtestDeactivateBlossom();
+    RegtestDeactivateHeartwood();
 }
 
 TEST(ChecktransactionTests, NonCanonicalEd25519Signature) {

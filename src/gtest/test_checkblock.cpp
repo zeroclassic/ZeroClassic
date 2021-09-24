@@ -223,26 +223,6 @@ TEST_F(ContextualCheckBlockTest, BlockSaplingRulesAcceptSaplingTx) {
     ExpectValidBlockFromTx(CTransaction(mtx));
 }
 
-
-// Test that a block evaluated under Blossom rules can contain Blossom transactions.
-TEST_F(ContextualCheckBlockTest, BlockBlossomRulesAcceptBlossomTx) {
-    SelectParams(CBaseChainParams::REGTEST);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_OVERWINTER, 1);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_SAPLING, 1);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_BLOSSOM, 1);
-
-    CMutableTransaction mtx = GetFirstBlockCoinbaseTx();
-
-    // Make it a Blossom transaction (using Sapling version/group id).
-    mtx.fOverwintered = true;
-    mtx.nVersion = SAPLING_TX_VERSION;
-    mtx.nVersionGroupId = SAPLING_VERSION_GROUP_ID;
-
-    SCOPED_TRACE("BlockBlossomRulesAcceptBlossomTx");
-    ExpectValidBlockFromTx(CTransaction(mtx));
-}
-
-
 // TEST PLAN: next, check that each ruleset will not accept other transaction
 // types. Currently (February 2020) this means with each of four *branches* active
 // (Sprout, Overwinter, Sapling, Blossom), we'll test that transactions for tx
@@ -336,35 +316,6 @@ TEST_F(ContextualCheckBlockTest, BlockSaplingRulesRejectOtherTx) {
 
     {
         SCOPED_TRACE("BlockSaplingRulesRejectOverwinterTx");
-        ExpectInvalidBlockFromTx(CTransaction(mtx), 100, "bad-sapling-tx-version-group-id");
-    }
-}
-
-
-// Test block evaluated under Blossom rules cannot contain non-Blossom transactions.
-TEST_F(ContextualCheckBlockTest, BlockBlossomRulesRejectOtherTx) {
-    SelectParams(CBaseChainParams::REGTEST);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_OVERWINTER, 1);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_SAPLING, 1);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_BLOSSOM, 1);
-
-    CMutableTransaction mtx = GetFirstBlockCoinbaseTx();
-
-    // Set the version to Sprout+JoinSplit (but nJoinSplit will be 0).
-    mtx.nVersion = 2;
-
-    {
-        SCOPED_TRACE("BlockBlossomRulesRejectSproutTx");
-        ExpectInvalidBlockFromTx(CTransaction(mtx), 100, "tx-overwintered-flag-not-set");
-    }
-
-    // Make it an Overwinter transaction
-    mtx.fOverwintered = true;
-    mtx.nVersion = OVERWINTER_TX_VERSION;
-    mtx.nVersionGroupId = OVERWINTER_VERSION_GROUP_ID;
-
-    {
-        SCOPED_TRACE("BlockBlossomRulesRejectOverwinterTx");
         ExpectInvalidBlockFromTx(CTransaction(mtx), 100, "bad-sapling-tx-version-group-id");
     }
 }

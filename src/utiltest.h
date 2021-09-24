@@ -41,10 +41,6 @@ const Consensus::Params& RegtestActivateSapling();
 
 void RegtestDeactivateSapling();
 
-const CChainParams& RegtestActivateBlossom(bool updatePow, int blossomActivationHeight = Consensus::NetworkUpgrade::ALWAYS_ACTIVE);
-
-void RegtestDeactivateBlossom();
-
 const Consensus::Params& RegtestActivateHeartwood(bool updatePow, int heartwoodActivationHeight = Consensus::NetworkUpgrade::ALWAYS_ACTIVE);
 
 void RegtestDeactivateHeartwood();

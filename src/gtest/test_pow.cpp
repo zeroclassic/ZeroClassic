@@ -78,11 +78,6 @@ TEST(PoW, DifficultyAveraging) {
     TestDifficultyAveragingImpl(Params().GetConsensus());
 }
 
-TEST(PoW, DifficultyAveragingBlossom) {
-    TestDifficultyAveragingImpl(RegtestActivateBlossom(true).GetConsensus());
-    RegtestDeactivateBlossom();
-}
-
 TEST(PoW, MinDifficultyRules) {
     SelectParams(CBaseChainParams::TESTNET);
     const Consensus::Params& params = Params().GetConsensus();

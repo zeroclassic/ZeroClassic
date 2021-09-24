@@ -7063,7 +7063,6 @@ CMutableTransaction CreateNewContextualCMutableTransaction(const Consensus::Para
     mtx.nVersion        = txVersionInfo.nVersion;
 
     if (mtx.fOverwintered) {
-        bool blossomActive = consensusParams.NetworkUpgradeActive(nHeight, Consensus::UPGRADE_BLOSSOM);
         unsigned int defaultExpiryDelta = DEFAULT_TX_EXPIRY_DELTA;
         mtx.nExpiryHeight = nHeight + (expiryDeltaArg ? expiryDeltaArg.value() : defaultExpiryDelta);
 

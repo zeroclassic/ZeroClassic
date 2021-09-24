@@ -67,7 +67,7 @@ static const uint64_t DEFAULT_MAX_UPLOAD_TARGET = 0;
 static const bool DEFAULT_BLOCKSONLY = false;
 /**
  * The period before a network upgrade activates, where connections to upgrading peers are preferred (in blocks).
- * This was three days for upgrades up to and including Blossom, and is 1.5 days from Heartwood onward.
+ * This is 2.4 days.
  */
 static const int NETWORK_UPGRADE_PEER_PREFERENCE_BLOCK_PERIOD = 1728;
 

@@ -25,8 +25,6 @@ struct TestParams {
                 return nHeight >= 5;
             case Consensus::UPGRADE_SAPLING:
                 return nHeight >= 10;
-            case Consensus::UPGRADE_BLOSSOM:
-                return nHeight >= 15;
             case Consensus::UPGRADE_HEARTWOOD:
                 return nHeight >= 20;
             case Consensus::UPGRADE_CANOPY:
@@ -57,7 +55,7 @@ TEST(FeatureFlagging, FeatureDependencies) {
         },
         {
             .dependsOn = {},
-            .activation = Consensus::UPGRADE_BLOSSOM
+            .activation = Consensus::UPGRADE_SAPLING
         },
         {
             .dependsOn = {TF_2, TF_3},
@@ -93,5 +91,5 @@ TEST(FeatureFlagging, FeatureDependencies) {
     EXPECT_DEATH(features.FeatureActive(params, 5, TF_4), "");
     // A feature can be activated before its activation height
     // if all of its dependencies are active
-    EXPECT_TRUE(features.FeatureActive(params, 15, TF_4));
+    //EXPECT_TRUE(features.FeatureActive(params, 15, TF_4));
 }

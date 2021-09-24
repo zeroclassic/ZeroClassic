@@ -135,12 +135,12 @@ TEST(Validation, ContextualCheckInputsDetectsOldBranchId) {
     SelectParams(CBaseChainParams::REGTEST);
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_OVERWINTER, 10);
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_SAPLING, 20);
-    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_BLOSSOM, 30);
+    UpdateNetworkUpgradeParameters(Consensus::UPGRADE_HEARTWOOD, 30);
     const Consensus::Params& consensusParams = Params(CBaseChainParams::REGTEST).GetConsensus();
 
     auto overwinterBranchId = NetworkUpgradeInfo[Consensus::UPGRADE_OVERWINTER].nBranchId;
     auto saplingBranchId = NetworkUpgradeInfo[Consensus::UPGRADE_SAPLING].nBranchId;
-    auto blossomBranchId = NetworkUpgradeInfo[Consensus::UPGRADE_BLOSSOM].nBranchId;
+    auto heartwoodBranchId = NetworkUpgradeInfo[Consensus::UPGRADE_HEARTWOOD].nBranchId;
 
     CBasicKeyStore keystore;
     CKey tsk = AddTestCKeyToKeyStore(keystore);
@@ -195,7 +195,7 @@ TEST(Validation, ContextualCheckInputsDetectsOldBranchId) {
         tx, mockState, view, true, 0, false, txdata,
         consensusParams, saplingBranchId));
 
-    // Attempt to validate the inputs against Blossom. All we should learn is
+    // Attempt to validate the inputs against Heartwood. All we should learn is
     // that the signature is invalid, because we don't check more than one
     // network upgrade back.
     EXPECT_CALL(mockState, DoS(
@@ -204,14 +204,14 @@ TEST(Validation, ContextualCheckInputsDetectsOldBranchId) {
         false)).Times(1);
     EXPECT_FALSE(ContextualCheckInputs(
         tx, mockState, view, true, 0, false, txdata,
-        consensusParams, blossomBranchId));
+        consensusParams, heartwoodBranchId));
 
     // Tear down
     chainActive.SetTip(NULL);
     mapBlockIndex.erase(blockHash);
 
     // Revert to default
-    RegtestDeactivateBlossom();
+    RegtestDeactivateHeartwood();
 }
 
 TEST(Validation, ReceivedBlockTransactions) {

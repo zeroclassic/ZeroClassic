@@ -147,21 +147,7 @@ int EstimateNetHeight(const Consensus::Params& params, int currentHeadersHeight,
     }
 
     int estimatedHeight = currentHeadersHeight + (now - currentHeadersTime) / params.PoWTargetSpacing(currentHeadersHeight);
-
-    int blossomActivationHeight = params.vUpgrades[Consensus::UPGRADE_BLOSSOM].nActivationHeight;
-    if (currentHeadersHeight >= blossomActivationHeight || estimatedHeight <= blossomActivationHeight) {
-        return ((estimatedHeight + 5) / 10) * 10;
-    }
-
-    int numPreBlossomBlocks = blossomActivationHeight - currentHeadersHeight;
-    int64_t preBlossomTime = numPreBlossomBlocks * params.PoWTargetSpacing(blossomActivationHeight - 1);
-    int64_t blossomActivationTime = currentHeadersTime + preBlossomTime;
-    if (blossomActivationTime >= now) {
-        return blossomActivationHeight;
-    }
-
-    int netheight =  blossomActivationHeight + (now - blossomActivationTime) / params.PoWTargetSpacing(blossomActivationHeight);
-    return ((netheight + 5) / 10) * 10;
+    return ((estimatedHeight + 5) / 10) * 10;
 }
 
 int MyEstimateNetHeight()

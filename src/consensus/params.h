@@ -33,7 +33,6 @@ enum UpgradeIndex : uint32_t {
     UPGRADE_TESTDUMMY,
     UPGRADE_OVERWINTER,
     UPGRADE_SAPLING,
-    UPGRADE_BLOSSOM,
     UPGRADE_HEARTWOOD,
     UPGRADE_CANOPY,
     UPGRADE_NU5,
@@ -120,7 +119,7 @@ public:
     bool FeatureActive(
             const Params& params,
             const int nHeight,
-            const Feature feature) const {
+            const Feature feature) const {       
         assert(feature < features.size());
 
         // The feature must be explicitly required by a CLI argument or by
