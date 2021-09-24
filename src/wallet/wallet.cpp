@@ -1514,9 +1514,7 @@ void DecrementNoteWitnesses(NoteDataMap& noteDataMap, int indexHeight, int64_t n
     }
 }
 
-/*
-// original
-void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex)
+void CWallet::DecrementNoteWitnessesOriginal(const CBlockIndex* pindex)
 {
     LOCK(cs_wallet);
     for (std::pair<const uint256, CWalletTx>& wtxItem : mapWallet) {
@@ -1531,7 +1529,6 @@ void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex)
     // CWallet::SetBestChain() (which also ensures that overall consistency
     // of the wallet.dat is maintained).
 }
-*/
 
 void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex)
 {
