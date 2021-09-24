@@ -147,7 +147,7 @@ public:
         keyConstants.bech32HRPs[SAPLING_EXTENDED_FVK]         = "zxviews";
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000011ef9959b4f");
+        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000011f6743bf58");
 												
         /**
          * The message start string should be awesome! ⓩ❤
@@ -200,9 +200,10 @@ public:
             (480000, uint256S("0x000036d4381865415852d20c06bdfa0e76d1ef9366373bd525cced37c47e9028"))
             (745000, uint256S("0x0000c09519cba8fce23add4cd4a64214821ab7419613535e6d6aeb506881fb8a"))
             (890000, uint256S("0x000065f890366e06e9dfa7b2724b4e5a07c40f8dce63ea10986bf94ad0c85066"))
-            (1068000, uint256S("0x001016adec1862295f4da17f965767ca2640433eab8593fc69d8b12f696c3830")),
-            1616190103,     // * UNIX timestamp of last checkpoint block
-            1767738,        // * total number of transactions between genesis and last checkpoint
+            (1068000, uint256S("0x001016adec1862295f4da17f965767ca2640433eab8593fc69d8b12f696c3830"))
+            (1200000, uint256S("0x000248ee701eec967a441b46a572f5030652865084e96f68cce29b43ac8f53f7")),
+            1632310404,     // * UNIX timestamp of last checkpoint block
+            1967608,        // * total number of transactions between genesis and last checkpoint
             1300            // * estimated number of transactions per day after checkpoint
                             //   total number of tx / (checkpoint block height / (24 * 24))
         };
