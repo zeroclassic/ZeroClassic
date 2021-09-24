@@ -1,4 +1,4 @@
-ZeroClassic v4.4.1
+ZeroClassic v4.4.2
 <img align="right" width="80" height="80" src="doc/imgs/logo.png">
 ===========
 
@@ -15,7 +15,7 @@ What differentiates ZeroClassic from Zcash?
 
 * No developer fees, founder rewards, funding streams or similar rules imposed to tax miners,
 * No "engineered scarcity" known as "halving", you are never "late to the party",
-* Proof of Work algorithm still resists ASICs,
+* Proof of Work algorithm Equihash (n=192, k=7) still resists ASICs,
 * The team is not backed up by any company, we are just few people with passion for technology, freedom and privacy.
 
 
