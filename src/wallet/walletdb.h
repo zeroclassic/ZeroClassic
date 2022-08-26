@@ -133,14 +133,10 @@ public:
     bool WritePurpose(const std::string& strAddress, const std::string& purpose);
     bool ErasePurpose(const std::string& strAddress);
 
-    //Begin Historical Wallet Tx
-    bool WriteArcTx(const CWalletTx& wtx);
+    /** Left just for zapping */
     bool EraseArcTx(uint256 hash);
-    bool WriteArcSproutOp(uint256 nullifier, JSOutPoint op);
     bool EraseArcSproutOp(uint256 nullifier);
-    bool WriteArcSaplingOp(uint256 nullifier, SaplingOutPoint op);
     bool EraseArcSaplingOp(uint256 nullifier);
-    //End Historical Wallet Tx
 
     bool WriteTx(const CWalletTx& wtx);
     bool EraseTx(uint256 hash);

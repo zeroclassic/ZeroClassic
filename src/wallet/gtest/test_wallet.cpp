@@ -30,7 +30,6 @@ public:
     MOCK_METHOD0(TxnAbort, bool());
 
     MOCK_METHOD1(WriteTx, bool(const CWalletTx& wtx));
-    MOCK_METHOD1(WriteArcTx, bool(const CWalletTx& wtx));
     MOCK_METHOD1(WriteWitnessCacheSize, bool(int64_t nWitnessCacheSize));
     MOCK_METHOD1(WriteBestBlock, bool(const CBlockLocator& loc));
 };

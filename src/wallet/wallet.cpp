@@ -1259,21 +1259,6 @@ void CWallet::RemoveFromSaplingSpends(const uint256& wtxid)
     }
 }
 
-void CWallet::AddToArcTxs(const uint256& wtxid, const ArchiveTxPoint& ArcTxPt)
-{
-    mapArcTxs[wtxid] = ArcTxPt;
-}
-
-void CWallet::AddToArcJSOutPoints(const uint256& nullifier, const JSOutPoint& op)
-{
-    mapArcJSOutPoints[nullifier] = op;
-}
-
-void CWallet::AddToArcSaplingOutPoints(const uint256& nullifier, const SaplingOutPoint& op)
-{
-    mapArcSaplingOutPoints[nullifier] = op;
-}
-
 void CWallet::AddToSpends(const uint256& wtxid)
 {
     assert(mapWallet.count(wtxid));
@@ -2160,14 +2145,12 @@ void CWallet::UpdateNullifierNoteMapWithTx(const CWalletTx& wtx)
         for (const mapSproutNoteData_t::value_type& item : wtx.mapSproutNoteData) {
             if (item.second.nullifier) {
                 mapSproutNullifiersToNotes[*item.second.nullifier] = item.first;
-                mapArcJSOutPoints[*item.second.nullifier] = item.first;
             }
         }
 
         for (const mapSaplingNoteData_t::value_type& item : wtx.mapSaplingNoteData) {
             if (item.second.nullifier) {
                 mapSaplingNullifiersToNotes[*item.second.nullifier] = item.first;
-                mapArcSaplingOutPoints[*item.second.nullifier] = item.first;
             }
         }
     }
@@ -2211,12 +2194,7 @@ void CWallet::UpdateSproutNullifierNoteMapWithTx(CWalletTx& wtx) {
 
                 uint256 nullifier = optNullifier.value();
                 mapSproutNullifiersToNotes[nullifier] = item.first;
-                mapArcJSOutPoints[nullifier] = item.first;
                 item.second.nullifier = nullifier;
-
-                //write the ArcOp to disk
-                CWalletDB walletdb(strWalletFile, "r+", false);
-                wtx.WriteArcSproutOpToDisk(&walletdb, nullifier, item.first);
             }
         }
     }
@@ -2272,11 +2250,6 @@ void CWallet::UpdateSaplingNullifierNoteMapWithTx(CWalletTx& wtx)
                 uint256 nullifier = optNullifier.value();
                 mapSaplingNullifiersToNotes[nullifier] = op;
                 item.second.nullifier = nullifier;
-                mapArcSaplingOutPoints[nullifier] = op;
-
-                //write the ArcOp to disk
-                CWalletDB walletdb(strWalletFile, "r+", false);
-                wtx.WriteArcSaplingOpToDisk(&walletdb, nullifier, op);
             }
         }
     }
@@ -2404,8 +2377,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         // Write to disk and update tx archive map
         if (fInsertedNew || fUpdated)
         {
-            AddToArcTxs(hash, ArchiveTxPoint(wtx.hashBlock, wtx.nIndex));
-            if (!(pwalletdb->WriteTx(wtx) && pwalletdb->WriteArcTx(wtx)))
+            if (!pwalletdb->WriteTx(wtx))
                 return false;
         }
 
@@ -3435,17 +3407,6 @@ void CWalletTx::GetAccountAmounts(const string& strAccount, CAmount& nReceived,
     }
 }
 
-
-bool CWalletTx::WriteArcSproutOpToDisk(CWalletDB *pwalletdb, uint256 nullifier, JSOutPoint op)
-{
-    return pwalletdb->WriteArcSproutOp(nullifier, op);
-}
-
-bool CWalletTx::WriteArcSaplingOpToDisk(CWalletDB *pwalletdb, uint256 nullifier, SaplingOutPoint op)
-{
-    return pwalletdb->WriteArcSaplingOp(nullifier, op);
-}
-
 void CWallet::WitnessNoteCommitment(std::vector<uint256> commitments,
                                     std::vector<std::optional<SproutWitness>>& witnesses,
                                     uint256 &final_anchor)
@@ -3577,7 +3538,6 @@ void CWallet::UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const ui
         assert (itmw != mapWallet.end());
         itmw->second.nOrderPos = it.second;
         walletdb.WriteTx(itmw->second);
-        walletdb.WriteArcTx(itmw->second);
     }
 
     // Update Next Wallet Tx Positon
@@ -3951,27 +3911,6 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
     }
 }
 
-bool CWallet::initalizeArcTx()
-{
-    AssertLockHeld(cs_main);
-
-    for (const std::pair<uint256, CWalletTx>& item : mapWallet)
-    {
-        const uint256& wtxid = item.first;
-
-        CWalletTx wtx = item.second;
-        if (wtx.GetDepthInMainChain() > 0)
-        {
-            if (mapArcTxs.find(wtxid) == mapArcTxs.end())
-            {
-                return false;
-            }
-        }
-    }
-    
-    return true;
-}
-
 /**
  * Scan the block chain (starting in pindexStart) for transactions
  * from or to us. If fUpdate is true, found transactions that already
@@ -3994,12 +3933,6 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 
     {
         LOCK2(cs_main, cs_wallet);
-
-        // Get union of current txids (in archive + wallet)
-        for (const std::pair<uint256, ArchiveTxPoint>& archive_item : mapArcTxs)
-        {
-            txListOriginal.insert(archive_item.first);
-        }
 
         for (const std::pair<uint256, CWalletTx>& wallet_item : mapWallet)
         {
@@ -6176,66 +6109,6 @@ bool CWallet::InitLoadWallet(bool clearWitnessCaches)
 
     uiInterface.InitMessage(_("Validating transaction archive..."));
 
-    bool fInitializeArcTx = false;
-    {
-        LOCK(cs_main);
-        fInitializeArcTx = walletInstance->initalizeArcTx();
-    }
-
-    if (!fInitializeArcTx)
-    {
-        // ArcTx validation failed, delete wallet point and clear vWtx
-
-        delete walletInstance;
-        walletInstance = NULL;
-        vWtx.clear();
-
-        //Zap All Transactions
-        uiInterface.InitMessage(_("Transaction archive not initalized, Zapping all transactions..."));
-        LogPrintf("Transaction archive not initalized, Zapping all transactions.\n");
-
-        CWallet *tempWallet = new CWallet(walletFile);
-        DBErrors nZapWalletRet = tempWallet->ZapWalletTx(vWtx);
-        if (nZapWalletRet != DB_LOAD_OK) {
-            return UIError(strprintf(_("Error loading %s: Wallet corrupted"), walletFile));
-        }
-
-        delete tempWallet;
-        tempWallet = NULL;
-
-        //Reload Wallet
-        uiInterface.InitMessage(_("Re-loading wallet, set to rescan..."));
-
-        walletInstance = new CWallet(walletFile);
-        DBErrors nLoadWalletRet = walletInstance->LoadWallet(fFirstRun);
-        if (nLoadWalletRet != DB_LOAD_OK)
-        {
-            if (nLoadWalletRet == DB_CORRUPT)
-            {
-                return UIError(strprintf(_("Error loading %s: Wallet corrupted"), walletFile));
-            }
-            else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
-            {
-                return UIError(strprintf(_("Error reading %s! All keys read correctly, but transaction data"
-                                            " or address book entries might be missing or incorrect. Restart the daemon with -zapwallettxes=2"),
-                    walletFile));
-            }
-            else if (nLoadWalletRet == DB_TOO_NEW)
-            {
-                return UIError(strprintf(_("Error loading %s: Wallet requires newer version of %s"),
-                                walletFile, _(PACKAGE_NAME)));
-            }
-            else if (nLoadWalletRet == DB_NEED_REWRITE)
-            {
-                return UIError(strprintf(_("Wallet needed to be rewritten: restart %s to complete"), _(PACKAGE_NAME)));
-            }
-            else
-            {
-                return UIError(strprintf(_("Error loading %s"), walletFile));
-            }
-        }
-    }
-
     if (GetBoolArg("-upgradewallet", fFirstRun))
     {
         int nMaxVersion = GetArg("-upgradewallet", 0);
@@ -6326,7 +6199,7 @@ bool CWallet::InitLoadWallet(bool clearWitnessCaches)
     RegisterValidationInterface(walletInstance);
 
     CBlockIndex *pindexRescan = chainActive.Genesis();
-    if (clearWitnessCaches || GetBoolArg("-rescan", false) || !fInitializeArcTx) {
+    if (clearWitnessCaches || GetBoolArg("-rescan", false)) {
         walletInstance->ClearNoteWitnessCache();
     } else {
         CWalletDB walletdb(walletFile);
@@ -6359,7 +6232,7 @@ bool CWallet::InitLoadWallet(bool clearWitnessCaches)
         CWalletDB::IncrementUpdateCounter();
 
         // Restore wallet transaction metadata after -zapwallettxes=1
-        if (GetBoolArg("-zapwallettxes", false) && GetArg("-zapwallettxes", "1") != "2" && fInitializeArcTx)
+        if (GetBoolArg("-zapwallettxes", false) && GetArg("-zapwallettxes", "1") != "2")
         {
             CWalletDB walletdb(walletFile);
 
@@ -6379,7 +6252,6 @@ bool CWallet::InitLoadWallet(bool clearWitnessCaches)
                     copyTo->strFromAccount = copyFrom->strFromAccount;
                     copyTo->nOrderPos = copyFrom->nOrderPos;
                     walletdb.WriteTx(*copyTo);
-                    walletdb.WriteArcTx(*copyTo);
                 }
             }
         }
