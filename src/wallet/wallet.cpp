@@ -2399,7 +2399,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         }
 
         //// debug print
-        LogPrintf("AddToWallet %s  %s%s\n", wtxIn.GetHash().ToString(), (fInsertedNew ? "new" : ""), (fUpdated ? "update" : ""));
+        LogPrintf("AddToWallet %s  %s\n", wtxIn.GetHash().ToString(), (fInsertedNew ? "new" : (fUpdated ? "update" : "status quo")));
 
         // Write to disk and update tx archive map
         if (fInsertedNew || fUpdated)
@@ -3981,6 +3981,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 {
     int ret = 0;
     int64_t nNow = GetTime();
+    int64_t nRescanStart = GetTime();
     //const CChainParams& chainParams = Params();
     const Consensus::Params &consensus_params = Params().GetConsensus();
     CBlockIndex* pindex = pindexStart;
@@ -4067,9 +4068,13 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
                 LogPrintf("Still rescanning. At block %d. Progress=%.2f [ %i wallet transactions ]\n", pindex->nHeight, (double)pindex->nHeight / tip_height, mapWallet.size());
             }
         }
-         
+
+        int64_t nBwcStart = GetTime();
         //Update all witness caches
         BuildWitnessCache(chainActive.Tip(), false);
+        int64_t nBwcFinish = GetTime();
+
+        LogPrintf("Wallet rescan report: rescanning: %u sec, witness cache building: %u sec, total: %u sec\n", nBwcStart - nRescanStart, nBwcFinish - nBwcStart, nBwcFinish - nRescanStart);
 
         ShowProgress(_("Rescanning..."), 100); // hide progress dialog in GUI
         {
