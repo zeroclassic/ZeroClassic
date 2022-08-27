@@ -851,9 +851,9 @@ protected:
     /**
      * pindex is the new tip being connected.
      */
-    int VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessOnly);
+    int VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessOnly, const CBlock* pblockIn);
      
-    void BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly);    
+    void BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, const CBlock* pblockIn);
     
     void IncrementNoteWitnesses(const CBlockIndex* pindex,
                                 const CBlock* pblock,
@@ -1042,6 +1042,10 @@ public:
     std::map<uint256, SaplingOutPoint> mapSaplingNullifiersToNotes;
 
     std::map<uint256, CWalletTx> mapWallet;
+
+    std::set<uint256> setSiftedSprout;
+    std::set<uint256> setSiftedSapling;
+    void AddToSifted(const uint256& wtxid);
 
     int64_t nOrderPosNext;
     std::map<uint256, int> mapRequestCount;
