@@ -1046,6 +1046,7 @@ public:
     std::set<uint256> setSiftedSprout;
     std::set<uint256> setSiftedSapling;
     void AddToSifted(const uint256& wtxid);
+    void RemoveFromSifted(const uint256& wtxid);
 
     int64_t nOrderPosNext;
     std::map<uint256, int> mapRequestCount;

@@ -1293,6 +1293,12 @@ void CWallet::AddToSifted(const uint256& wtxid)
         setSiftedSapling.emplace(wtxid);
 }
 
+void CWallet::RemoveFromSifted(const uint256& wtxid)
+{
+    setSiftedSprout.erase(wtxid);
+    setSiftedSapling.erase(wtxid);
+}
+
 void CWallet::ClearNoteWitnessCache()
 {
     LOCK(cs_wallet);
@@ -3603,6 +3609,8 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
         bool fRemoveFromSpends = !(itmw->second.IsCoinBase());
         if (mapWallet.erase(txid_to_delete))
         {
+            RemoveFromSifted(txid_to_delete);
+
             if (walletdb.EraseTx(txid_to_delete))
             {
                 if (walletdb.EraseArcTx(txid_to_delete))
@@ -3635,6 +3643,8 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
     {
         if (mapWallet.erase(txid_to_delete))
         {
+            RemoveFromSifted(txid_to_delete);
+
             if (walletdb.EraseTx(txid_to_delete))
             {
                 nRemoved++;
