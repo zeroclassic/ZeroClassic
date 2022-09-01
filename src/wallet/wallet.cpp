@@ -1299,6 +1299,16 @@ void CWallet::RemoveFromSifted(const uint256& wtxid)
     setSiftedSapling.erase(wtxid);
 }
 
+void CWallet::AddToEx(const uint256& wtxid, bool fFromLoadWallet)
+{
+    setExWallet.emplace(wtxid);
+    if (!fFromLoadWallet)
+    {
+        CWalletDB walletdb(strWalletFile, "r+", false);
+        walletdb.WriteExTx(wtxid);
+    }
+}
+
 void CWallet::ClearNoteWitnessCache()
 {
     LOCK(cs_wallet);

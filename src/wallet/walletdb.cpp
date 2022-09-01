@@ -77,6 +77,19 @@ bool CWalletDB::EraseArcSaplingOp(uint256 nullifier)
     return Erase(std::make_pair(std::string("arczsop"), nullifier));
 }
 
+/** Keep the log of deleted wallet transactions */
+bool CWalletDB::WriteExTx(uint256 hash)
+{
+    nWalletDBUpdateCounter++;
+    return Write(std::make_pair(std::string("extx"), hash), std::string());
+}
+
+bool CWalletDB::EraseExTx(uint256 hash)
+{
+    nWalletDBUpdateCounter++;
+    return Erase(std::make_pair(std::string("extx"), hash));
+}
+
 bool CWalletDB::WriteTx(const CWalletTx& wtx)
 {
     nWalletDBUpdateCounter++;
@@ -535,6 +548,12 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
                 wss.fAnyUnordered = true;
 
             pwallet->AddToWallet(wtx, true, NULL);
+        }
+        else if (strType == "extx")
+        {
+            uint256 hash;
+            ssKey >> hash;
+            pwallet->AddToEx(hash, true);
         }
         else if (strType == "acentry")
         {
@@ -1028,7 +1047,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
     return result;
 }
 
-DBErrors CWalletDB::FindWalletTxToZap(CWallet* pwallet, vector<uint256>& vTxHash, vector<CWalletTx>& vWtx, vector<uint256>& vArcHash, vector<uint256>& vArcSproutNullifier, vector<uint256>& vArcSaplingNullifier)
+DBErrors CWalletDB::FindWalletTxToZap(CWallet* pwallet, vector<uint256>& vTxHash, vector<CWalletTx>& vWtx, vector<uint256>& vExTxHash, vector<uint256>& vArcHash, vector<uint256>& vArcSproutNullifier, vector<uint256>& vArcSaplingNullifier)
 {
     pwallet->vchDefaultKey = CPubKey();
     bool fNoncriticalErrors = false;
@@ -1086,6 +1105,10 @@ DBErrors CWalletDB::FindWalletTxToZap(CWallet* pwallet, vector<uint256>& vTxHash
                 }
 
                 vTxHash.push_back(hash);
+            } else if (strType == "extx") {
+                uint256 hash;
+                ssKey >> hash;
+                vExTxHash.push_back(hash);
             } else if (strType == "arctx") {
                 uint256 hash;
                 ssKey >> hash;
@@ -1119,10 +1142,11 @@ DBErrors CWalletDB::ZapWalletTx(CWallet* pwallet, vector<CWalletTx>& vWtx)
 {
     // build list of wallet TXs
     vector<uint256> vTxHash;
+    vector<uint256> vExTxHash;
     vector<uint256> vArcTxHash;
     vector<uint256> vArcSproutNullifier;
     vector<uint256> vArcSaplingNullifier;
-    DBErrors err = FindWalletTxToZap(pwallet, vTxHash, vWtx, vArcTxHash, vArcSproutNullifier, vArcSaplingNullifier);
+    DBErrors err = FindWalletTxToZap(pwallet, vTxHash, vWtx, vExTxHash, vArcTxHash, vArcSproutNullifier, vArcSaplingNullifier);
     if (err != DB_LOAD_OK)
         return err;
 

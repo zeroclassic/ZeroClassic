@@ -138,6 +138,10 @@ public:
     bool EraseArcSproutOp(uint256 nullifier);
     bool EraseArcSaplingOp(uint256 nullifier);
 
+    /** Keep the log of deleted wallet transactions */
+    bool WriteExTx(uint256 hash);
+    bool EraseExTx(uint256 hash);
+
     bool WriteTx(const CWalletTx& wtx);
     bool EraseTx(uint256 hash);
 
@@ -179,7 +183,7 @@ public:
 
     DBErrors ReorderTransactions(CWallet* pwallet);
     DBErrors LoadWallet(CWallet* pwallet);
-    DBErrors FindWalletTxToZap(CWallet* pwallet, std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx, std::vector<uint256>& vArcHash, std::vector<uint256>& vArcSproutNullifier, std::vector<uint256>& vArcSaplingNullifier);
+    DBErrors FindWalletTxToZap(CWallet* pwallet, std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx, std::vector<uint256>& vExTxHash, std::vector<uint256>& vArcHash, std::vector<uint256>& vArcSproutNullifier, std::vector<uint256>& vArcSaplingNullifier);
     DBErrors ZapWalletTx(CWallet* pwallet, std::vector<CWalletTx>& vWtx);
     static bool Compact(CDBEnv& dbenv, const std::string& strFile);
     static bool Recover(CDBEnv& dbenv, const std::string& filename, bool fOnlyKeys);

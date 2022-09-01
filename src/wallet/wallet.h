@@ -1043,6 +1043,9 @@ public:
 
     std::map<uint256, CWalletTx> mapWallet;
 
+    std::set<uint256> setExWallet;
+    void AddToEx(const uint256& wtxid, bool fFromLoadWallet);
+
     std::set<uint256> setSiftedSprout;
     std::set<uint256> setSiftedSapling;
     void AddToSifted(const uint256& wtxid);
