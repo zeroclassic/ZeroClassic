@@ -82,7 +82,7 @@ static const unsigned int WITNESS_CACHE_SIZE = MAX_REORG_LENGTH + 1;
 static const size_t HD_WALLET_SEED_LENGTH = 32;
 
 //Default Transaction Rentention N-BLOCKS
-static const int DEFAULT_TX_DELETE_INTERVAL = 1000;
+static const int DEFAULT_TX_DELETE_INTERVAL = 2000;
 
 //Default Transaction Rentention N-BLOCKS
 static const unsigned int DEFAULT_TX_RETENTION_BLOCKS = 10000;
