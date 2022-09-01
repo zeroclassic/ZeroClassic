@@ -86,6 +86,9 @@ uint64_t nPruneTarget = 0;
 bool fAlerts = DEFAULT_ALERTS;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 
+std::map<const uint256, const CBlock> mapPrefetchCache;
+CCriticalSection cs_prefetch;
+
 std::optional<unsigned int> expiryDeltaArg = std::nullopt;
 
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
@@ -1892,6 +1895,70 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
         return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",
                 pindex->ToString(), pindex->GetBlockPos().ToString());
     return true;
+}
+
+static bool PrefetchWorker(const std::vector<const CBlockIndex*> &vPindex , const Consensus::Params& consensusParams)
+{
+    CBlock nextBlock;
+    for (const CBlockIndex* pindex : vPindex)
+    {
+        if (ReadBlockFromDisk(nextBlock, pindex, consensusParams))
+        {
+            LOCK (cs_prefetch);
+            mapPrefetchCache.emplace(std::pair(pindex->GetBlockHash(), nextBlock));
+        }
+    }
+    return true;
+}
+
+bool ReadBlockFromDiskPrefetch(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams, const int nNumBlocks)
+{
+    const int numThreads = 8; // can be greater than the number of physical CPU cores because thread workers are not intensive
+    bool block_result = false;
+    const uint256 hash = pindex->GetBlockHash();
+    const int height = pindex->nHeight;
+
+    if (mapPrefetchCache.find(hash) != mapPrefetchCache.end()) {
+        block = mapPrefetchCache.at(hash);
+        block_result = true;
+    }
+
+    if (height % nNumBlocks == 0)
+    {
+        mapPrefetchCache.clear();
+
+        std::vector<const CBlockIndex*> vBlockIndexesBatches[8];
+        std::vector<std::future<bool>> vPrefetchFutures;
+        CBlockIndex *pindex_next = chainActive.Next(pindex);
+        int j = 0;
+
+        while (pindex_next && j < nNumBlocks) {
+            vBlockIndexesBatches[j % numThreads].emplace_back(pindex_next);
+            pindex_next = chainActive.Next(pindex_next);
+            j++;
+        }
+
+        for (int b = 0; b < numThreads; b++)
+        {
+            vPrefetchFutures.emplace_back(std::async(std::launch::async, PrefetchWorker, vBlockIndexesBatches[b], consensusParams));
+        }
+
+        for (auto &one_future : vPrefetchFutures) {
+            one_future.get();
+        }
+
+        vPrefetchFutures.resize(0);
+        for (int k = 0; k < numThreads; k++)
+        {
+            vBlockIndexesBatches[k].resize(0);
+        }
+    }
+
+    if (!block_result) {
+        block_result = ReadBlockFromDisk(block, pindex, consensusParams);
+    }
+
+    return block_result;
 }
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
