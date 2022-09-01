@@ -1611,15 +1611,17 @@ int CWallet::VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessO
     int nMinimumHeight = pindex->nHeight;
     bool walletHasNotes = false; // Use to enable z_sendmany when no notes are present
     const Consensus::Params &consensus_params = Params().GetConsensus();
+    int nTipHeight = chainActive.Height();
 
     for (const uint256& wtxid : setSiftedSprout)
     {
         CWalletTx& wtx = mapWallet.at(wtxid);
 
-        if (wtx.GetDepthInMainChain() > 0)
+        int wtxDepth = wtx.GetDepthInMainChain();
+        int wtxHeight = nTipHeight + 1 - wtxDepth;
+        if (wtxDepth > 0 && pindex->nHeight >= wtxHeight)
         {
             walletHasNotes = true;
-            int wtxHeight = mapBlockIndex[wtx.hashBlock]->nHeight;
 
             // Sprout
             for (auto& [op, nd] : wtx.mapSproutNoteData)
@@ -1736,7 +1738,9 @@ int CWallet::VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessO
     {
         CWalletTx& wtx = mapWallet.at(wtxid);
 
-        if (wtx.GetDepthInMainChain() > 0)
+        int wtxDepth = wtx.GetDepthInMainChain();
+        int wtxHeight = nTipHeight + 1 - wtxDepth;
+        if (wtxDepth > 0 && pindex->nHeight >= wtxHeight)
         {
             walletHasNotes = true;
             int wtxHeight = mapBlockIndex[wtx.hashBlock]->nHeight;
@@ -1885,6 +1889,8 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
     //Show in UI
     bool uiShown = false;
 
+    int nTipHeight = chainActive.Height();
+
     while (pblockindex)
     {
         // exit loop if trying to shutdown
@@ -1917,7 +1923,8 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
         }
         else
         {
-            ReadBlockFromDisk(block, pblockindex, consensus_params);
+            //ReadBlockFromDisk(block, pblockindex, consensus_params);
+            ReadBlockFromDiskPrefetch(block, pblockindex, consensus_params, 512);
             pblock = &block;
         }
 
@@ -1925,7 +1932,8 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
         {
             CWalletTx& wtx = mapWallet.at(wtxid);
 
-            if (wtx.GetDepthInMainChain() > 0)
+            int wtxDepth = wtx.GetDepthInMainChain();
+            if (wtxDepth > 0 && pblockindex->nHeight >= nTipHeight + 1 - wtxDepth)
             {
                 //Sprout
                 for (auto& [op, nd] : wtx.mapSproutNoteData)
@@ -1959,7 +1967,8 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
         {
             CWalletTx& wtx = mapWallet.at(wtxid);
 
-            if (wtx.GetDepthInMainChain() > 0)
+            int wtxDepth = wtx.GetDepthInMainChain();
+            if (wtxDepth > 0 && pblockindex->nHeight >= nTipHeight + 1 - wtxDepth)
             {
                 //Sapling
                 for (auto& [op, nd] : wtx.mapSaplingNoteData)
@@ -2423,7 +2432,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         //// debug print
         LogPrintf("AddToWallet %s  %s\n", wtxIn.GetHash().ToString(), (fInsertedNew ? "new" : (fUpdated ? "update" : "status quo")));
 
-        // Write to disk and update tx archive map
+        // Write to disk
         if (fInsertedNew || fUpdated)
         {
             if (!pwalletdb->WriteTx(wtx))
@@ -3619,23 +3628,18 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
         bool fRemoveFromSpends = !(itmw->second.IsCoinBase());
         if (mapWallet.erase(txid_to_delete))
         {
+            if (fRemoveFromSpends)
+            {
+                RemoveFromSpends(txid_to_delete);
+            }
+
             RemoveFromSifted(txid_to_delete);
 
             if (walletdb.EraseTx(txid_to_delete))
             {
-                if (walletdb.EraseArcTx(txid_to_delete))
-                {
-                    if (fRemoveFromSpends)
-                    {
-                        RemoveFromSpends(txid_to_delete);
-                    }
-                    nRemoved++;
-                    LogPrint("deletetx", "DeleteTransactions(): Expired wtx %s is deleted!\n", txid_to_delete.ToString());
-                }
-                else
-                {
-                    LogPrintf("DeleteTransactions(): Deleting expired wtx archive %s from wallet db failed!\n", txid_to_delete.ToString());
-                }
+                walletdb.EraseArcTx(txid_to_delete); // clean up obsolete tx archive remainings 
+                nRemoved++;
+                LogPrint("deletetx", "DeleteTransactions(): Expired wtx %s is deleted from wallet db!\n", txid_to_delete.ToString());
             }
             else
             {
@@ -3654,11 +3658,12 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
         if (mapWallet.erase(txid_to_delete))
         {
             RemoveFromSifted(txid_to_delete);
+            AddToEx(txid_to_delete, false);
 
             if (walletdb.EraseTx(txid_to_delete))
             {
                 nRemoved++;
-                LogPrint("deletetx", "DeleteTransactions(): Old wtx %s is deleted!\n", txid_to_delete.ToString());
+                LogPrint("deletetx", "DeleteTransactions(): Old wtx %s is deleted from wallet db!\n", txid_to_delete.ToString());
             }
             else
             {
@@ -3711,7 +3716,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
             }
 
             // delete transactions
-            // Sort Transactions by block and block index
+            // Sort Transactions by block and tx index
             int64_t maxOrderPos = 0;
             ReorderWalletTransactions(mapSorted, maxOrderPos);
             if (maxOrderPos > int64_t(mapSorted.size()) * 10)
@@ -3951,7 +3956,8 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
 
             // Delete Transactions from wallet
             nRemoved = DeleteTransactions(removeTxs, removeExpiredTxs);
-            LogPrintf("Delete Tx - Total wtx count = %i ; marked for eviction: %i expired + %i old ; deleted in this round = %i\n", mapWallet.size(), nExpiredWtxesToRemove, nWtxesToRemove, nRemoved);
+            if (nRemoved)
+                LogPrintf("Delete Tx - Total wtx count = %i ; marked for eviction: %i expired + %i old ; deleted in this round = %i\n", mapWallet.size(), nExpiredWtxesToRemove, nWtxesToRemove, nRemoved);
         }
 
         // Compact wallet only if cumulative count of deleted wtxes has reached the threshold
@@ -4018,14 +4024,23 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 
             CBlock block;
             bool blockInvolvesMe = false;
-            ReadBlockFromDisk(block, pindex, consensus_params);
+            //ReadBlockFromDisk(block, pindex, consensus_params);
+            ReadBlockFromDiskPrefetch(block, pindex, consensus_params, 512);
 
             for (const CTransaction& tx : block.vtx)
             {
+                uint256 txid = tx.GetHash();
+
+                if (fTxDeleteEnabled && (setExWallet.find(txid) != setExWallet.end()))
+                {
+                    LogPrint("deletetx", "Transaction %s rescan skipped, tagged as ex (previously deleted)\n", txid.ToString());
+                    continue;
+                }
+
                 if (AddToWalletIfInvolvingMe(tx, &block, pindex->nHeight, fUpdate))
                 {
                     blockInvolvesMe = true;
-                    txList.insert(tx.GetHash());
+                    txList.insert(txid);
                     ret++;
                 }
             }
@@ -5310,6 +5325,8 @@ DBErrors CWallet::ZapWalletTx(std::vector<CWalletTx>& vWtx)
 
     if (nZapWalletTxRet != DB_LOAD_OK)
         return nZapWalletTxRet;
+
+    CWalletDB::Compact(bitdb, strWalletFile);
 
     return DB_LOAD_OK;
 }
