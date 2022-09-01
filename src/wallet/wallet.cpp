@@ -55,9 +55,9 @@ bool fPayAtLeastCustomFee = true;
 
 bool fTxDeleteEnabled = false;
 bool fTxConflictDeleteEnabled = false;
-int fDeleteInterval = DEFAULT_TX_DELETE_INTERVAL;
-unsigned int fDeleteTransactionsAfterNBlocks = DEFAULT_TX_RETENTION_BLOCKS;
-unsigned int fKeepLastNTransactions = DEFAULT_TX_RETENTION_LASTTX;
+int nDeleteInterval = DEFAULT_TX_DELETE_INTERVAL;
+unsigned int nDeleteTransactionsAfterNBlocks = DEFAULT_TX_RETENTION_BLOCKS;
+unsigned int nKeepLastNTransactions = DEFAULT_TX_RETENTION_LASTTX;
 
 const char * DEFAULT_WALLET_DAT = RC_COIN_WALLET_FILENAME;
 
@@ -657,7 +657,7 @@ void CWallet::ChainTip(const CBlockIndex *pindex,
             // Build intial witnesses on every block
             BuildWitnessCache(pindex, true, pblock);
             ChainTipAdded(pindex, pblock, added->first, added->second);
-            if (initialDownloadCheck && pindex->nHeight % fDeleteInterval == 0)
+            if (initialDownloadCheck && pindex->nHeight % nDeleteInterval == 0)
             {
                 DeleteWalletTransactions(pindex);
             }
@@ -3691,12 +3691,12 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
             LOCK2(cs_main, cs_wallet);
 
             // return early if wallet is almost empty (e.g. during full rescan of zapped wallet)
-            if (mapWallet.size() <= fKeepLastNTransactions)
+            if (mapWallet.size() <= nKeepLastNTransactions)
             {
                 return;
             }
 
-            int nDeleteAfter = (int)fDeleteTransactionsAfterNBlocks;
+            int nDeleteAfter = (int)nDeleteTransactionsAfterNBlocks;
 
             // Check for acentries - exit function if found
             {
@@ -3811,7 +3811,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     for (const auto &pair : pwtx->mapSaplingNoteData)
                     {
                         SaplingNoteData nd = pair.second;
-                        if (!nd.nullifier || GetSaplingSpendDepth(nd.nullifier.value()) <= fDeleteTransactionsAfterNBlocks)
+                        if (!nd.nullifier || GetSaplingSpendDepth(nd.nullifier.value()) <= nDeleteTransactionsAfterNBlocks)
                         {
                             LogPrint("deletetx","DeleteTx - Unspent sapling input tx %s\n", wtxid.ToString());
                             deleteTx = false;
@@ -3851,7 +3851,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     for (const auto &pair : pwtx->mapSproutNoteData)
                     {
                         const SproutNoteData nd = pair.second;
-                        if (!nd.nullifier || GetSproutSpendDepth(nd.nullifier.value()) <= fDeleteTransactionsAfterNBlocks)
+                        if (!nd.nullifier || GetSproutSpendDepth(nd.nullifier.value()) <= nDeleteTransactionsAfterNBlocks)
                         {
                             LogPrint("deletetx","DeleteTx - Unspent sprout input tx %s\n", wtxid.ToString());
                             deleteTx = false;
@@ -3897,7 +3897,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                         ExtractDestination(pwtx->vout[i].scriptPubKey, address);
                         if(IsMine(pwtx->vout[i]))
                         {
-                            if (GetSpendDepth(wtxid, i) <= fDeleteTransactionsAfterNBlocks)
+                            if (GetSpendDepth(wtxid, i) <= nDeleteTransactionsAfterNBlocks)
                             {
                                 LogPrint("deletetx","DeleteTx - Unspent transparent input tx %s\n", wtxid.ToString());
                                 deleteTx = false;
@@ -3931,7 +3931,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     }
 
                     //Keep Last N Transactions
-                    if (mapSorted.size() - txCount < fKeepLastNTransactions + txConflictCount + txUnConfirmed)
+                    if (mapSorted.size() - txCount < nKeepLastNTransactions + txConflictCount + txUnConfirmed)
                     {
                         LogPrint("deletetx","DeleteTx - Transaction set position %i, tx %s\n", mapSorted.size() - txCount, wtxid.ToString());
                         deleteTx = false;
@@ -4038,7 +4038,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             ChainTipAdded(pindex, &block, sproutTree, saplingTree);
 
             //Delete Transactions
-            if (fTxDeleteEnabled && (pindex->nHeight % fDeleteInterval == 0))
+            if (fTxDeleteEnabled && (pindex->nHeight % nDeleteInterval == 0))
                 DeleteWalletTransactions(pindex);
 
             pindex = chainActive.Next(pindex);
@@ -6210,21 +6210,21 @@ bool CWallet::InitLoadWallet(bool clearWitnessCaches)
     fTxDeleteEnabled = GetBoolArg("-deletetx", false);
     fTxConflictDeleteEnabled = GetBoolArg("-deleteconflicttx", true);
 
-    fDeleteInterval = GetArg("-deleteinterval", DEFAULT_TX_DELETE_INTERVAL);
-    if (fDeleteInterval < 1)
+    nDeleteInterval = GetArg("-deleteinterval", DEFAULT_TX_DELETE_INTERVAL);
+    if (nDeleteInterval < 1)
         return UIError(_("deleteinterval must be greater than 0"));
 
-    fKeepLastNTransactions = GetArg("-keeptxnum", DEFAULT_TX_RETENTION_LASTTX);
-    if (fKeepLastNTransactions < 1)
+    nKeepLastNTransactions = GetArg("-keeptxnum", DEFAULT_TX_RETENTION_LASTTX);
+    if (nKeepLastNTransactions < 1)
         return UIError(_("keeptxnum must be greater than 0"));
 
-    fDeleteTransactionsAfterNBlocks = GetArg("-keeptxfornblocks", DEFAULT_TX_RETENTION_BLOCKS);
-    if (fDeleteTransactionsAfterNBlocks < 1)
+    nDeleteTransactionsAfterNBlocks = GetArg("-keeptxfornblocks", DEFAULT_TX_RETENTION_BLOCKS);
+    if (nDeleteTransactionsAfterNBlocks < 1)
         return UIError(_("keeptxfornblocks must be greater than 0"));
 
-    if (fDeleteTransactionsAfterNBlocks < MAX_REORG_LENGTH + 1 ) {
+    if (nDeleteTransactionsAfterNBlocks < MAX_REORG_LENGTH + 1 ) {
         LogPrintf("keeptxfornblock is less the MAX_REORG_LENGTH, Setting to %i\n", MAX_REORG_LENGTH + 1);
-        fDeleteTransactionsAfterNBlocks = MAX_REORG_LENGTH + 1;
+        nDeleteTransactionsAfterNBlocks = MAX_REORG_LENGTH + 1;
     }
 
     if (fFirstRun)

@@ -51,9 +51,9 @@ extern bool fSendFreeTransactions;
 extern bool fPayAtLeastCustomFee;
 extern bool fTxDeleteEnabled;
 extern bool fTxConflictDeleteEnabled;
-extern int fDeleteInterval;
-extern unsigned int fDeleteTransactionsAfterNBlocks;
-extern unsigned int fKeepLastNTransactions;
+extern int nDeleteInterval;
+extern unsigned int nDeleteTransactionsAfterNBlocks;
+extern unsigned int nKeepLastNTransactions;
 
 static const unsigned int DEFAULT_KEYPOOL_SIZE = 100;
 //! -paytxfee default
