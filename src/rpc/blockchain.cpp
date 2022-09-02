@@ -963,7 +963,7 @@ UniValue exportchain(const UniValue& params, bool fHelp)
         {
             CBlock block;
 
-            if (ReadBlockFromDisk(block, pindex, chainparams))
+            if (ReadBlockFromDiskPrefetch(block, pindex, chainparams, 512))
             {
                 // Write index header
                 unsigned int nSize = GetSerializeSize(fileout, block);
