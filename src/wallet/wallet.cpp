@@ -3840,9 +3840,16 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                             const CWalletTx *parent = GetWalletTx(parentHash);
                             if (parent != NULL && parentHash != wtxid)
                             {
-                                LogPrint("deletetx","DeleteTx - Parent of sapling tx %s found\n", wtxid.ToString());
-                                deleteTx = false;
-                                break;
+                                if (std::find(removeTxs.begin(), removeTxs.end(), parentHash) == removeTxs.end())
+                                {
+                                    LogPrint("deletetx","DeleteTx - Parent of sapling tx %s found\n", wtxid.ToString());
+                                    deleteTx = false;
+                                    break;
+                                }
+                                else
+                                {
+                                    LogPrint("deletetx", "DeleteTx - Parent of sapling tx %s found, but queued for this deleting round\n", wtxid.ToString());
+                                }
                             }
                         }
                     }
@@ -3882,9 +3889,16 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                                 const CWalletTx *parent = GetWalletTx(parentHash);
                                 if (parent != NULL && parentHash != wtxid)
                                 {
-                                    LogPrint("deletetx","DeleteTx - Parent of sprout tx %s found\n", wtxid.ToString());
-                                    deleteTx = false;
-                                    break;
+                                    if (std::find(removeTxs.begin(), removeTxs.end(), parentHash) == removeTxs.end())
+                                    {
+                                        LogPrint("deletetx","DeleteTx - Parent of sprout tx %s found\n", wtxid.ToString());
+                                        deleteTx = false;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        LogPrint("deletetx", "DeleteTx - Parent of sprout tx %s found, but queued for this deleting round\n", wtxid.ToString());
+                                    }
                                 }
                             }
                         }
@@ -3924,9 +3938,17 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                         const CWalletTx *parent = GetWalletTx(parentHash);
                         if (parent != NULL && parentHash != wtxid)
                         {
-                            LogPrint("deletetx","DeleteTx - Parent of transparent tx %s found\n", wtxid.ToString());
-                            deleteTx = false;
-                            break;
+                            if (std::find(removeTxs.begin(), removeTxs.end(), parentHash) == removeTxs.end())
+                            {
+                                LogPrint("deletetx","DeleteTx - Parent of transparent tx %s found\n", wtxid.ToString());
+                                deleteTx = false;
+                                break;
+                            }
+                            else
+                            {
+                                LogPrint("deletetx", "DeleteTx - Parent of transparent tx %s found, but queued for this deleting round\n", wtxid.ToString());
+                            }
+
                         }
                     }
 
