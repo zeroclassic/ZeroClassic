@@ -3535,23 +3535,20 @@ void CWallet::ReorderWalletTransactions(std::map<std::pair<int,int>, const uint2
 
     int maxSortNumber = chainActive.Tip()->nHeight + 1;
 
-    for (const auto &it : mapWallet)
+    for (const auto& [wtxid, wtx] : mapWallet)
     {
-        const uint256 wtxid = it.first;
-        const CWalletTx wtx = it.second;
-
         int confirms = wtx.GetDepthInMainChain();
-        maxOrderPos = max(maxOrderPos, wtx.nOrderPos);
+        maxOrderPos = std::max(maxOrderPos, wtx.nOrderPos);
 
         if (confirms > 0) {
             int wtxHeight = mapBlockIndex[wtx.hashBlock]->nHeight;
             auto key = std::make_pair(wtxHeight, wtx.nIndex);
-            mapSorted.insert(std::make_pair(key, wtxid));
+            mapSorted.emplace(std::make_pair(key, wtxid));
         }
         else
         {
             auto key = std::make_pair(maxSortNumber, 0);
-            mapSorted.insert(std::make_pair(key, wtxid));
+            mapSorted.emplace(std::make_pair(key, wtxid));
             maxSortNumber++;
         }
     }
@@ -3568,9 +3565,8 @@ void CWallet::UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const ui
     std::map<const uint256, const int64_t> mapUpdatedPos;
 
     // Check the postion of each transaction relative to the previous one.
-    for (const auto &it : mapSorted)
+    for (const auto& [key, wtxid] : mapSorted)
     {
-        const uint256 wtxid = it.second;
         const auto itmw = mapWallet.find(wtxid);
         assert (itmw != mapWallet.end());
         const CWalletTx wtx = itmw->second;
@@ -3578,7 +3574,7 @@ void CWallet::UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const ui
         if (wtx.nOrderPos <= previousPosition || resetOrder)
         {
             previousPosition++;
-            mapUpdatedPos.insert(std::make_pair(wtxid, previousPosition));
+            mapUpdatedPos.emplace(std::make_pair(wtxid, previousPosition));
         }
         else
         {
@@ -3588,13 +3584,12 @@ void CWallet::UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const ui
 
     // Update transactions nOrderPos for transactions that changed
     CWalletDB walletdb(strWalletFile, "r+", false);
-    for (const auto &it : mapUpdatedPos)
+    for (const auto& [wtxid, orderpos] : mapUpdatedPos)
     {
-        const uint256 wtxid = it.first;
-        LogPrint("deletetx","Reorder Tx - Updating Positon to %i for Tx %s\n ", it.second, wtxid.ToString());
+        LogPrint("deletetx","Reorder Tx - Updating Positon to %i for Tx %s\n ", orderpos, wtxid.ToString());
         auto itmw = mapWallet.find(wtxid);
         assert (itmw != mapWallet.end());
-        itmw->second.nOrderPos = it.second;
+        itmw->second.nOrderPos = orderpos;
         walletdb.WriteTx(itmw->second);
     }
 
@@ -3736,9 +3731,8 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
             int txUnConfirmed = 0;
             int txCount = 0;
 
-            for (auto &item : mapSorted)
+            for (const auto& [key, wtxid] : mapSorted)
             {
-                const uint256 wtxid = item.second;
                 auto itmw = mapWallet.find(wtxid);
                 assert (itmw != mapWallet.end());
                 const CWalletTx *pwtx = &(itmw->second); 
@@ -3813,9 +3807,8 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                 else
                 {
                     //Check for unspent inputs or spend less than N Blocks ago. (Sapling)
-                    for (const auto &pair : pwtx->mapSaplingNoteData)
+                    for (const auto& [op, nd] : pwtx->mapSaplingNoteData)
                     {
-                        SaplingNoteData nd = pair.second;
                         if (!nd.nullifier || GetSaplingSpendDepth(nd.nullifier.value()) <= nDeleteTransactionsAfterNBlocks)
                         {
                             LogPrint("deletetx","DeleteTx - Unspent sapling input tx %s\n", wtxid.ToString());
@@ -3860,9 +3853,8 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     }
 
                     //Check for unspent inputs or spend less than N Blocks ago. (Sprout)
-                    for (const auto &pair : pwtx->mapSproutNoteData)
+                    for (const auto& [op, nd] : pwtx->mapSproutNoteData)
                     {
-                        const SproutNoteData nd = pair.second;
                         if (!nd.nullifier || GetSproutSpendDepth(nd.nullifier.value()) <= nDeleteTransactionsAfterNBlocks)
                         {
                             LogPrint("deletetx","DeleteTx - Unspent sprout input tx %s\n", wtxid.ToString());
@@ -3914,7 +3906,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     {
                         CTxDestination address;
                         ExtractDestination(pwtx->vout[i].scriptPubKey, address);
-                        if(IsMine(pwtx->vout[i]))
+                        if (IsMine(pwtx->vout[i]))
                         {
                             if (GetSpendDepth(wtxid, i) <= nDeleteTransactionsAfterNBlocks)
                             {
@@ -3931,9 +3923,8 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                     }
 
                     // Check for output with that no longer have parents in the wallet. (Transparent)
-                    for (int i = 0; i < pwtx->vin.size(); i++)
+                    for (const CTxIn &txin : pwtx->vin)
                     {
-                        const CTxIn &txin = pwtx->vin[i];
                         const uint256 &parentHash = txin.prevout.hash;
                         const CWalletTx *parent = GetWalletTx(parentHash);
                         if (parent != NULL && parentHash != wtxid)
@@ -3948,7 +3939,6 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                             {
                                 LogPrint("deletetx", "DeleteTx - Parent of transparent tx %s found, but queued for this deleting round\n", wtxid.ToString());
                             }
-
                         }
                     }
 
