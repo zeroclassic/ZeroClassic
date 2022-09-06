@@ -110,8 +110,8 @@ static const unsigned int DATABASE_FLUSH_INTERVAL = 24 * 60 * 60;
 static const unsigned int WITNESS_WRITE_INTERVAL = 10 * 60;
 /** Number of updates between writing wallet witness data to disk. */
 static const unsigned int WITNESS_WRITE_UPDATES = 10000;
-/** Minimum number of wtx deleted between compacting wallet. */
-static const unsigned int COMPACTING_THRESHOLD = 10;
+/** Minimum number of wtx deleted to trigger wallet compacting. */
+static const unsigned int COMPACTING_THRESHOLD = 100;
 /** Maximum length of reject messages. */
 static const unsigned int MAX_REJECT_MESSAGE_LENGTH = 111;
 static const unsigned int DEFAULT_LIMITFREERELAY = 15;
