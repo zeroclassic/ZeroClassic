@@ -1935,68 +1935,87 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
             pblock = &block;
         }
 
-        for (const uint256& wtxid : setSiftedSprout)
+        std::vector<uint256> vSproutCommitments;
+        std::vector<uint256> vSaplingCommitments;
+
+        if (setSiftedSprout.size())
         {
-            CWalletTx& wtx = mapWallet.at(wtxid);
-
-            int wtxDepth = wtx.GetDepthInMainChain();
-            if (wtxDepth > 0 && pblockindex->nHeight >= nTipHeight + 1 - wtxDepth)
+            for (const CTransaction &tx : pblock->vtx)
             {
-                //Sprout
-                for (auto& [op, nd] : wtx.mapSproutNoteData)
+                for (const JSDescription &jsdesc : tx.vJoinSplit)
                 {
-                    if (nd.nullifier && nd.witnessHeight == pblockindex->nHeight - 1
-                    && GetSproutSpendDepth(nd.nullifier.value()) <= WITNESS_CACHE_SIZE)
+                    for (const uint256 &note_commitment : jsdesc.commitments)
                     {
-                        nd.witnesses.push_front(nd.witnesses.front());
-                        if (nd.witnesses.size() > WITNESS_CACHE_SIZE)
-                        {
-                            nd.witnesses.resize(WITNESS_CACHE_SIZE);
-                        }
+                        vSproutCommitments.emplace_back(note_commitment);
+                    }
+                }
+            }
 
-                        for (const CTransaction &tx : pblock->vtx)
+            for (const uint256& wtxid : setSiftedSprout)
+            {
+                CWalletTx& wtx = mapWallet.at(wtxid);
+
+                int wtxDepth = wtx.GetDepthInMainChain();
+                if (wtxDepth > 0 && pblockindex->nHeight >= nTipHeight + 1 - wtxDepth)
+                {
+                    //Sprout
+                    for (auto& [op, nd] : wtx.mapSproutNoteData)
+                    {
+                        if (nd.nullifier && nd.witnessHeight == pblockindex->nHeight - 1
+                        && GetSproutSpendDepth(nd.nullifier.value()) <= WITNESS_CACHE_SIZE)
                         {
-                            for (const JSDescription &jsdesc : tx.vJoinSplit)
+                            nd.witnesses.push_front(nd.witnesses.front());
+                            if (nd.witnesses.size() > WITNESS_CACHE_SIZE)
                             {
-                                for (const uint256 &note_commitment : jsdesc.commitments)
-                                {
-                                    nd.witnesses.front().append(note_commitment);
-                                }
+                                nd.witnesses.resize(WITNESS_CACHE_SIZE);
                             }
+
+                            for (const uint256& commitment : vSproutCommitments)
+                            {
+                                nd.witnesses.front().append(commitment);
+                            }
+                            nd.witnessHeight = pblockindex->nHeight;
                         }
-                        nd.witnessHeight = pblockindex->nHeight;
                     }
                 }
             }
         }
 
-        for (const uint256& wtxid : setSiftedSapling)
+        if (setSiftedSapling.size())
         {
-            CWalletTx& wtx = mapWallet.at(wtxid);
-
-            int wtxDepth = wtx.GetDepthInMainChain();
-            if (wtxDepth > 0 && pblockindex->nHeight >= nTipHeight + 1 - wtxDepth)
+            for (const CTransaction &tx : pblock->vtx)
             {
-                //Sapling
-                for (auto& [op, nd] : wtx.mapSaplingNoteData)
+                for (const OutputDescription &outdesc : tx.vShieldedOutput)
                 {
-                    if (nd.nullifier && nd.witnessHeight == pblockindex->nHeight - 1
-                    && GetSaplingSpendDepth(nd.nullifier.value()) <= WITNESS_CACHE_SIZE)
-                    {
-                        nd.witnesses.push_front(nd.witnesses.front());
-                        if (nd.witnesses.size() > WITNESS_CACHE_SIZE)
-                        {
-                            nd.witnesses.resize(WITNESS_CACHE_SIZE);
-                        }
+                    vSaplingCommitments.emplace_back(outdesc.cmu);
+                }
+            }
 
-                        for (const CTransaction &tx : pblock->vtx)
+            for (const uint256& wtxid : setSiftedSapling)
+            {
+                CWalletTx& wtx = mapWallet.at(wtxid);
+
+                int wtxDepth = wtx.GetDepthInMainChain();
+                if (wtxDepth > 0 && pblockindex->nHeight >= nTipHeight + 1 - wtxDepth)
+                {
+                    //Sapling
+                    for (auto& [op, nd] : wtx.mapSaplingNoteData)
+                    {
+                        if (nd.nullifier && nd.witnessHeight == pblockindex->nHeight - 1
+                        && GetSaplingSpendDepth(nd.nullifier.value()) <= WITNESS_CACHE_SIZE)
                         {
-                            for (const OutputDescription &outdesc : tx.vShieldedOutput)
+                            nd.witnesses.push_front(nd.witnesses.front());
+                            if (nd.witnesses.size() > WITNESS_CACHE_SIZE)
                             {
-                                nd.witnesses.front().append(outdesc.cmu);
+                                nd.witnesses.resize(WITNESS_CACHE_SIZE);
                             }
+
+                            for (const uint256& commitment : vSaplingCommitments)
+                            {
+                                nd.witnesses.front().append(commitment);
+                            }
+                            nd.witnessHeight = pblockindex->nHeight;
                         }
-                        nd.witnessHeight = pblockindex->nHeight;
                     }
                 }
             }
