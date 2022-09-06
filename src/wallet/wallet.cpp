@@ -3957,10 +3957,13 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                 }
 
                 // Collect everything else for deletion
-                if (deleteTx && int(removeTxs.size()) < MAX_DELETE_TX_SIZE)
+                if (deleteTx && removeTxs.size() < MAX_DELETE_TX_SIZE)
                 {
                     removeTxs.push_back(wtxid);
                 }
+
+                if (removeTxs.size() == MAX_DELETE_TX_SIZE)
+                    break;
             }
 
             int nExpiredWtxesToRemove = removeExpiredTxs.size();
