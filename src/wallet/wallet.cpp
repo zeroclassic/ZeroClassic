@@ -1884,11 +1884,11 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
     }
 
     CBlockIndex *pblockindex = chainActive[startHeight];
-    int height = chainActive.Height();
 
     //Show in UI
     bool uiShown = false;
-
+    int64_t nStartUI = GetTimeMillis();
+    int64_t nStartLog = nStartUI;
     int nTipHeight = chainActive.Height();
 
     while (pblockindex)
@@ -1899,7 +1899,7 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
             break;
         }
 
-        if (pblockindex->nHeight % 1000 == 0 && pblockindex->nHeight <= height)
+        if (GetTimeMillis() - nStartUI >= 2000 && pblockindex->nHeight <= nTipHeight)
         {
             if (!uiShown)
             {
@@ -1907,10 +1907,17 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
                 uiInterface.ShowProgress("Building Witnesses", 0);
             }
 
-            float wb_progress = (float)pblockindex->nHeight * 100 / height;
+            float wb_progress = (float)pblockindex->nHeight * 100 / nTipHeight;
             uiInterface.ShowProgress((_("Building Witnesses for block") + strprintf(" %i ...", pblockindex->nHeight)).c_str(), (int)wb_progress);
             uiInterface.InitMessage((_("Building Witnesses for block") + strprintf(" %i ... [ %.2f%% ]", pblockindex->nHeight, wb_progress)).c_str());
-            LogPrintf("Building Witnesses for block %i ... [ %.2f%% ]", pblockindex->nHeight, wb_progress);
+            nStartUI = GetTimeMillis();
+        }
+
+        if (GetTimeMillis() - nStartLog >= 60000)
+        {
+            float wb_progress = (float)pblockindex->nHeight * 100 / nTipHeight;
+            LogPrintf("Still building Witnesses : at block height %i ... [ %.2f%% ]", pblockindex->nHeight, wb_progress);
+            nStartLog = GetTimeMillis();
         }
 
         //Cycle through blocks and transactions building Sprout and Sapling tree until the commitment needed is reached
@@ -3994,7 +4001,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 {
     int ret = 0;
     int64_t nNow = GetTime();
-    int64_t nRescanStart = GetTime();
+    int64_t nRescanStart = nNow;
+    int64_t nStartUI = GetTimeMillis();
     const Consensus::Params &consensus_params = Params().GetConsensus();
     CBlockIndex* pindex = pindexStart;
     std::set<uint256> txList;
@@ -4027,7 +4035,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 
         while (pindex)
         {
-            if (pindex->nHeight % 1000 == 0 && tip_height >= pindex->nHeight)
+            if (GetTimeMillis() - nStartUI >= 2000 && tip_height >= pindex->nHeight)
             {
                 LOCK(cs_rescan);
 
@@ -4035,6 +4043,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
                 ShowProgress(_("Rescanning..."), (int)(dRescanProgress.value()));
                 uiInterface.ShowProgress(_("Rescanning..."), (int)(dRescanProgress.value()));
                 uiInterface.InitMessage(_("Rescanning...") + strprintf(" [%.2f %%]", dRescanProgress.value()).c_str());
+                nStartUI = GetTimeMillis();
             }
 
             CBlock block;
