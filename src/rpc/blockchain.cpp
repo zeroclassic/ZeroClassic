@@ -962,8 +962,18 @@ UniValue exportchain(const UniValue& params, bool fHelp)
         while (pindex && pindex != current_tip)
         {
             CBlock block;
+            bool result;
 
-            if (ReadBlockFromDiskPrefetch(block, pindex, chainparams, 512))
+            if (fBlockPrefetchEnabled)
+            {
+                result = ReadBlockFromPrefetch(block, pindex, chainparams);
+            }
+            else
+            {
+                result = ReadBlockFromDisk(block, pindex, chainparams);
+            }
+
+            if (result)
             {
                 // Write index header
                 unsigned int nSize = GetSerializeSize(fileout, block);
@@ -983,11 +993,16 @@ UniValue exportchain(const UniValue& params, bool fHelp)
                 pindex = chainActive.Next(pindex);
             }
         }
-        
+
         LogPrintf("Finished exporting blocks at height %i\n", pindex->nHeight);
 
         FileCommit(fileout.Get());
         fileout.fclose();
+
+        if (fBlockPrefetchEnabled)
+        {
+            ClearBlockPrefetch();
+        }
 
         ret.pushKV("result", true);
         ret.pushKV("height", pindex->nHeight);

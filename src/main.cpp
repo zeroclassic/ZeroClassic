@@ -86,8 +86,13 @@ uint64_t nPruneTarget = 0;
 bool fAlerts = DEFAULT_ALERTS;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 
+bool fBlockPrefetchEnabled = DEFAULT_BLOCK_PREFETCH_ENABLED;
+unsigned int nPrefetchNumThreads = DEFAULT_PREFETCH_NUM_THREADS;
+unsigned int nPrefetchNumBlocks = DEFAULT_PREFETCH_NUM_BLOCKS;
 std::map<const uint256, const CBlock> mapPrefetchCache;
-CCriticalSection cs_prefetch;
+std::vector<const CBlockIndex*> vPindexQueue;
+std::mutex mutex_prefetch_queue;
+std::mutex mutex_prefetch_cache;
 
 std::optional<unsigned int> expiryDeltaArg = std::nullopt;
 
@@ -1897,23 +1902,47 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
     return true;
 }
 
-static bool PrefetchWorker(const std::vector<const CBlockIndex*> &vPindex , const Consensus::Params& consensusParams)
+static bool PrefetchWorker(const Consensus::Params& consensusParams)
 {
+    const CBlockIndex* pblockindex;
     CBlock nextBlock;
-    for (const CBlockIndex* pindex : vPindex)
+    int nQueueSize;
+
+    while (true)
     {
-        if (ReadBlockFromDisk(nextBlock, pindex, consensusParams))
+        mutex_prefetch_queue.lock();
+
+        if (vPindexQueue.size())
         {
-            LOCK (cs_prefetch);
-            mapPrefetchCache.emplace(std::pair(pindex->GetBlockHash(), nextBlock));
+            pblockindex = *vPindexQueue.begin();
+            vPindexQueue.erase(vPindexQueue.begin());
+            mutex_prefetch_queue.unlock();
+
+            if (ReadBlockFromDisk(nextBlock, pblockindex, consensusParams))
+            {
+                mutex_prefetch_cache.lock();
+                mapPrefetchCache.emplace(std::pair(pblockindex->GetBlockHash(), nextBlock));
+                mutex_prefetch_cache.unlock();
+            }
+        }
+        else
+        {
+            mutex_prefetch_queue.unlock();
+            break;
         }
     }
+
     return true;
 }
 
-bool ReadBlockFromDiskPrefetch(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams, const int nNumBlocks)
+void ClearBlockPrefetch()
 {
-    const int numThreads = 8; // can be greater than the number of physical CPU cores because thread workers are not intensive
+    mapPrefetchCache.clear();
+    vPindexQueue.resize(0);
+}
+
+bool ReadBlockFromPrefetch(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams)
+{
     bool block_result = false;
     const uint256 hash = pindex->GetBlockHash();
     const int height = pindex->nHeight;
@@ -1923,24 +1952,23 @@ bool ReadBlockFromDiskPrefetch(CBlock& block, const CBlockIndex* pindex, const C
         block_result = true;
     }
 
-    if (height % nNumBlocks == 0)
+    if (height % nPrefetchNumBlocks == 0)
     {
-        mapPrefetchCache.clear();
-
-        std::vector<const CBlockIndex*> vBlockIndexesBatches[8];
+        ClearBlockPrefetch();
+        vPindexQueue.reserve(nPrefetchNumBlocks);
         std::vector<std::future<bool>> vPrefetchFutures;
         CBlockIndex *pindex_next = chainActive.Next(pindex);
         int j = 0;
 
-        while (pindex_next && j < nNumBlocks) {
-            vBlockIndexesBatches[j % numThreads].emplace_back(pindex_next);
+        while (pindex_next && j < nPrefetchNumBlocks) {
+            vPindexQueue.emplace_back(pindex_next);
             pindex_next = chainActive.Next(pindex_next);
             j++;
         }
 
-        for (int b = 0; b < numThreads; b++)
+        for (int b = 0; b < nPrefetchNumThreads; b++)
         {
-            vPrefetchFutures.emplace_back(std::async(std::launch::async, PrefetchWorker, vBlockIndexesBatches[b], consensusParams));
+            vPrefetchFutures.emplace_back(std::async(std::launch::async, PrefetchWorker, consensusParams));
         }
 
         for (auto &one_future : vPrefetchFutures) {
@@ -1948,10 +1976,6 @@ bool ReadBlockFromDiskPrefetch(CBlock& block, const CBlockIndex* pindex, const C
         }
 
         vPrefetchFutures.resize(0);
-        for (int k = 0; k < numThreads; k++)
-        {
-            vBlockIndexesBatches[k].resize(0);
-        }
     }
 
     if (!block_result) {

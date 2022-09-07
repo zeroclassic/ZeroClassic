@@ -1930,8 +1930,15 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
         }
         else
         {
-            //ReadBlockFromDisk(block, pblockindex, consensus_params);
-            ReadBlockFromDiskPrefetch(block, pblockindex, consensus_params, 512);
+            if (fBlockPrefetchEnabled)
+            {
+                ReadBlockFromPrefetch(block, pblockindex, consensus_params);
+            }
+            else
+            {
+                ReadBlockFromDisk(block, pblockindex, consensus_params);
+            }
+
             pblock = &block;
         }
 
@@ -2027,6 +2034,11 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
         }
 
         pblockindex = chainActive.Next(pblockindex);
+    }
+
+    if (fBlockPrefetchEnabled)
+    {
+        ClearBlockPrefetch();
     }
 
     if (uiShown)
@@ -4067,8 +4079,15 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 
             CBlock block;
             bool blockInvolvesMe = false;
-            //ReadBlockFromDisk(block, pindex, consensus_params);
-            ReadBlockFromDiskPrefetch(block, pindex, consensus_params, 512);
+
+            if (fBlockPrefetchEnabled)
+            {
+                ReadBlockFromPrefetch(block, pindex, consensus_params);
+            }
+            else
+            {
+                ReadBlockFromDisk(block, pindex, consensus_params);
+            }
 
             for (const CTransaction& tx : block.vtx)
             {
@@ -4104,6 +4123,11 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
                 nNow = GetTime();
                 LogPrintf("Still rescanning. At block %d. Progress=%.2f [ %i wallet transactions ]\n", pindex->nHeight, (double)pindex->nHeight / tip_height, mapWallet.size());
             }
+        }
+
+        if (fBlockPrefetchEnabled)
+        {
+            ClearBlockPrefetch();
         }
 
         int64_t nBwcStart = GetTime();
