@@ -2589,6 +2589,14 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
 void CWallet::SyncTransaction(const CTransaction& tx, const CBlock* pblock, const int nHeight)
 {
     LOCK(cs_wallet);
+    const uint256 txid = tx.GetHash();
+
+    if (fTxDeleteEnabled && (setExWallet.find(txid) != setExWallet.end()))
+    {
+        LogPrint("deletetx", "Transaction %s sync skipped, tagged as ex (previously deleted)\n", txid.ToString());
+        return;
+    }
+
     if (!AddToWalletIfInvolvingMe(tx, pblock, nHeight, true))
         return; // Not one of ours
 
