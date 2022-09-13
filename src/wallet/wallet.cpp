@@ -4045,6 +4045,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
     int64_t nStartUI = GetTimeMillis();
     const Consensus::Params &consensus_params = Params().GetConsensus();
     CBlockIndex* pindex = pindexStart;
+    int64_t nRealBirthday = 0;
+
     std::set<uint256> txList;
     std::set<uint256> txListOriginal;
 
@@ -4061,14 +4063,21 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             txListOriginal.insert(wallet_item.first);
         }
 
+        int64_t nWalletBirthday = nTimeFirstKey;
+        if (nForceBirthday)
+        {
+            nWalletBirthday = nForceBirthday;
+            LogPrintf("ScanForWalletTransactions(): Alternative wallet birthday %u forced instead of %u\n", nWalletBirthday, nTimeFirstKey);
+        }
         // no need to read and scan block, if block was created before
         // our wallet birthday (as adjusted for block time variability)
-        while (!fIgnoreBirthday && pindex && nTimeFirstKey && pindex->GetBlockTime() < nTimeFirstKey - TIMESTAMP_WINDOW) {
+        while (pindex && nWalletBirthday && pindex->GetBlockTime() < nWalletBirthday - TIMESTAMP_WINDOW) {
             pindex = chainActive.Next(pindex);
         }
 
         int tip_height = chainActive.Tip()->nHeight;
         ShowProgress(_("Rescanning..."), 0);
+        LogPrintf("ScanForWalletTransactions(): Actual scanning started at height %i\n", pindex->nHeight);
 
         SproutMerkleTree sproutTree;
         SaplingMerkleTree saplingTree;
@@ -4113,6 +4122,11 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
                     blockInvolvesMe = true;
                     txList.insert(txid);
                     ret++;
+                    if (GetBoolArg("-rescan", false) && !nRealBirthday)
+                    {
+                        nRealBirthday = pindex->GetBlockTime();
+                        LogPrintf("ScanForWalletTransactions(): The first significant wtx appeared at height %i. Appropriate \"wallet birthday\" would be %u\n", pindex->nHeight, nRealBirthday);
+                    }
                 }
             }
 

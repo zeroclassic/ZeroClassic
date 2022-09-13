@@ -428,6 +428,7 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-blockprefetch", strprintf(_("Use block prefetch to speed up sequential block reading (default: %u)"), DEFAULT_BLOCK_PREFETCH_ENABLED));
     strUsage += HelpMessageOpt("-prefetchnumthreads=<n>", strprintf(_("How many threads to use for parallel block prefetching (default: %u)"), DEFAULT_PREFETCH_NUM_THREADS));
     strUsage += HelpMessageOpt("-prefetchnumblocks=<n>", strprintf(_("How many blocks to keep in prefetch cache (default: %u)"), DEFAULT_PREFETCH_NUM_BLOCKS));
+    strUsage += HelpMessageOpt("-forcebirthday", strprintf(_("Use alternative \"wallet birthday\" Unix timestamp (default: %u)"), 0));
     strUsage += HelpMessageOpt("-reindex", _("Rebuild block chain index from current blk000??.dat files on startup"));
 #ifndef WIN32
     strUsage += HelpMessageOpt("-sysperms", _("Create new files with system default permissions, instead of umask 077 (only effective with disabled wallet functionality)"));
@@ -1122,6 +1123,12 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (fBlockPrefetchEnabled)
     {
         LogPrintf("number of prefetch threads = %i , number of prefetch blocks = %i\n", nPrefetchNumThreads, nPrefetchNumBlocks);
+    }
+
+    nForceBirthday = GetArg("-forcebirthday", 0);
+    if (nForceBirthday && nForceBirthday < Params().GenesisBlock().GetBlockTime())
+    {
+        nForceBirthday = Params().GenesisBlock().GetBlockTime();
     }
 
     LogPrintf("Using LevelDB version %i.%i\n", leveldb::kMajorVersion, leveldb::kMinorVersion);

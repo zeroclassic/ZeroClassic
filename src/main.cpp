@@ -94,6 +94,8 @@ std::vector<const CBlockIndex*> vPindexQueue;
 std::mutex mutex_prefetch_queue;
 std::mutex mutex_prefetch_cache;
 
+int64_t nForceBirthday = 0;
+
 std::optional<unsigned int> expiryDeltaArg = std::nullopt;
 
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);

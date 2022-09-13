@@ -225,6 +225,10 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 /** Block prefetch cache */
 extern bool fBlockPrefetchEnabled;
 extern unsigned int nPrefetchNumThreads;
+extern unsigned int nPrefetchNumBlocks;
+
+extern int64_t nForceBirthday;
+
 extern unsigned int nPrefetchNumBlocks;;
 
 /** Register with a network node to receive its signals */
