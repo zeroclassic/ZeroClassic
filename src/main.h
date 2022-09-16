@@ -135,6 +135,11 @@ static const unsigned int DEFAULT_PREFETCH_NUM_THREADS = 8;
 /** Default for -prefetchnumblocks */
 static const unsigned int DEFAULT_PREFETCH_NUM_BLOCKS = 2048;
 
+/** Default for -ignorespam */
+static const bool DEFAULT_IGNORE_SPAM = false;
+/** Default for -spamoutputsmin */
+static const int DEFAULT_SPAM_OUTPUTS_MIN = 5;
+
 #define equihash_parameters_acceptable(N, K) \
     ((CBlockHeader::HEADER_SIZE + equihash_solution_size(N, K))*MAX_HEADERS_RESULTS < \
      MAX_PROTOCOL_MESSAGE_LENGTH-1000)
@@ -229,7 +234,8 @@ extern unsigned int nPrefetchNumBlocks;
 
 extern int64_t nForceBirthday;
 
-extern unsigned int nPrefetchNumBlocks;;
+extern bool fIgnoreSpam;
+extern int nSpamOutputsMin;
 
 /** Register with a network node to receive its signals */
 void RegisterNodeSignals(CNodeSignals& nodeSignals);
