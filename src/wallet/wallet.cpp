@@ -58,6 +58,7 @@ bool fTxConflictDeleteEnabled = false;
 int nDeleteInterval = DEFAULT_TX_DELETE_INTERVAL;
 unsigned int nDeleteTransactionsAfterNBlocks = DEFAULT_TX_RETENTION_BLOCKS;
 unsigned int nKeepLastNTransactions = DEFAULT_TX_RETENTION_LASTTX;
+bool fIgnoreExTx = false;
 
 const char * DEFAULT_WALLET_DAT = RC_COIN_WALLET_FILENAME;
 
@@ -4178,7 +4179,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             {
                 uint256 txid = tx.GetHash();
 
-                if (fTxDeleteEnabled && (setExWallet.find(txid) != setExWallet.end()))
+                if (fIgnoreExTx && (setExWallet.find(txid) != setExWallet.end()))
                 {
                     LogPrint("deletetx", "Transaction %s rescan skipped, tagged as ex (previously deleted)\n", txid.ToString());
                     continue;
@@ -6248,6 +6249,7 @@ std::string CWallet::GetWalletHelpString(bool showDebug)
     strUsage += HelpMessageOpt("-deleteconflicttx", _("Delete conflicted, expired and orphaned transactions (requires -deletetx=1; default: 1)"));
     strUsage += HelpMessageOpt("-keeptxnum", strprintf(_("Keep the last <n> transactions (default: %i)"), DEFAULT_TX_RETENTION_LASTTX));
     strUsage += HelpMessageOpt("-keeptxfornblocks", strprintf(_("Keep transactions for at least <n> blocks (default: %i)"), DEFAULT_TX_RETENTION_BLOCKS));
+    strUsage += HelpMessageOpt("-ignoreextx", _("Option to ignore ex wallet transactions, not to re-add them on rescan"));
     strUsage += HelpMessageOpt("-migration", _("Enable the Sprout to Sapling migration"));
     strUsage += HelpMessageOpt("-migrationdestaddress=<zaddr>", _("Set the Sapling migration address"));
     strUsage += HelpMessageOpt("-mintxfee=<amt>", strprintf(_("Fees (in %s/kB) smaller than this are considered zero fee for transaction creation (default: %s)"),
@@ -6400,6 +6402,8 @@ bool CWallet::InitLoadWallet(bool clearWitnessCaches)
         LogPrintf("keeptxfornblock is less the MAX_REORG_LENGTH, Setting to %i\n", MAX_REORG_LENGTH + 1);
         nDeleteTransactionsAfterNBlocks = MAX_REORG_LENGTH + 1;
     }
+
+    fIgnoreExTx = GetBoolArg("-ignoreextx", false);
 
     if (fFirstRun)
     {

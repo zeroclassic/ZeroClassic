@@ -54,6 +54,7 @@ extern bool fTxConflictDeleteEnabled;
 extern int nDeleteInterval;
 extern unsigned int nDeleteTransactionsAfterNBlocks;
 extern unsigned int nKeepLastNTransactions;
+extern bool fIgnoreExTx;
 
 static const unsigned int DEFAULT_KEYPOOL_SIZE = 100;
 //! -paytxfee default
