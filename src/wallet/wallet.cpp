@@ -58,6 +58,7 @@ bool fTxConflictDeleteEnabled = false;
 int nDeleteInterval = DEFAULT_TX_DELETE_INTERVAL;
 unsigned int nDeleteTransactionsAfterNBlocks = DEFAULT_TX_RETENTION_BLOCKS;
 unsigned int nKeepLastNTransactions = DEFAULT_TX_RETENTION_LASTTX;
+bool fIgnoreExTx = false;
 
 const char * DEFAULT_WALLET_DAT = RC_COIN_WALLET_FILENAME;
 
@@ -1865,6 +1866,20 @@ int CWallet::VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessO
     return nMinimumHeight;
 }
 
+static SproutWitness AppendSingleSproutCommitment(const SproutWitness& witness, const uint256& commitment)
+{
+    SproutWitness sw(witness);
+    sw.append(commitment);
+    return sw;
+}
+
+static SaplingWitness AppendSingleSaplingCommitment(const SaplingWitness& witness, const uint256& commitment)
+{
+    SaplingWitness sw(witness);
+    sw.append(commitment);
+    return sw;
+}
+
 void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, const CBlock* pblockIn)
 {
     LOCK2(cs_main, cs_wallet);
@@ -1945,6 +1960,9 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
         std::vector<uint256> vSproutCommitments;
         std::vector<uint256> vSaplingCommitments;
 
+        std::vector<SproutNoteData*> vSproutNoteData;
+        std::vector<SaplingNoteData*> vSaplingNoteData;
+
         if (setSiftedSprout.size())
         {
             for (const CTransaction &tx : pblock->vtx)
@@ -1977,15 +1995,34 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
                                 nd.witnesses.resize(WITNESS_CACHE_SIZE);
                             }
 
-                            for (const uint256& commitment : vSproutCommitments)
-                            {
-                                nd.witnesses.front().append(commitment);
-                            }
+                            // for async append of commitments
+                            vSproutNoteData.push_back(&nd);
+
                             nd.witnessHeight = pblockindex->nHeight;
                         }
                     }
                 }
             }
+
+            // Parallelization with std::async
+            std::vector<std::future<SproutWitness>> vSproutWitnessFutures;
+            for (const auto& commitment : vSproutCommitments)
+            {
+                for (auto pnd : vSproutNoteData)
+                {
+                    vSproutWitnessFutures.emplace_back(std::async(std::launch::async, AppendSingleSproutCommitment, pnd->witnesses.front(), commitment));
+                }
+
+                assert(vSproutWitnessFutures.size() == vSproutNoteData.size());
+
+                for (int i = 0; i < vSproutWitnessFutures.size(); i++)
+                {
+                    vSproutNoteData.at(i)->witnesses.front() = vSproutWitnessFutures.at(i).get();
+                }
+
+                vSproutWitnessFutures.resize(0);
+            }
+
         }
 
         if (setSiftedSapling.size())
@@ -2017,14 +2054,32 @@ void CWallet::BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, con
                                 nd.witnesses.resize(WITNESS_CACHE_SIZE);
                             }
 
-                            for (const uint256& commitment : vSaplingCommitments)
-                            {
-                                nd.witnesses.front().append(commitment);
-                            }
+                            // for async append of commitments
+                            vSaplingNoteData.push_back(&nd);
+
                             nd.witnessHeight = pblockindex->nHeight;
                         }
                     }
                 }
+            }
+
+            // Parallelization with std::async
+            std::vector<std::future<SaplingWitness>> vSaplingWitnessFutures;
+            for (const auto& commitment : vSaplingCommitments)
+            {
+                for (auto pnd : vSaplingNoteData)
+                {
+                    vSaplingWitnessFutures.emplace_back(std::async(std::launch::async, AppendSingleSaplingCommitment, pnd->witnesses.front(), commitment));
+                }
+
+                assert(vSaplingWitnessFutures.size() == vSaplingNoteData.size());
+
+                for (int i = 0; i < vSaplingWitnessFutures.size(); i++)
+                {
+                    vSaplingNoteData.at(i)->witnesses.front() = vSaplingWitnessFutures.at(i).get();
+                }
+
+                vSaplingWitnessFutures.resize(0);
             }
         }
 
@@ -2439,7 +2494,6 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
                              wtxIn.hashBlock.ToString());
             }
             AddToSpends(hash);
-            AddToSifted(hash);
         }
 
         bool fUpdated = false;
@@ -2473,6 +2527,8 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         // Write to disk
         if (fInsertedNew || fUpdated)
         {
+            AddToSifted(hash);
+
             if (!pwalletdb->WriteTx(wtx))
                 return false;
         }
@@ -2548,11 +2604,25 @@ bool CWallet::UpdatedNoteData(const CWalletTx& wtxIn, CWalletTx& wtx)
 bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, const int nHeight, bool fUpdate)
 {
     {
+        if (fIgnoreSpam && tx.vShieldedOutput.size() >= nSpamOutputsMin)
+        {
+            if (IsFromMe(tx))
+            {
+                LogPrint("antispam", "Antispam filter allowed tx %s with %i Sapling outputs (is from me)\n", tx.GetHash().ToString(), tx.vShieldedOutput.size());
+            }
+            else
+            {
+                LogPrint("antispam", "Antispam filter discarded tx %s with %i Sapling outputs\n", tx.GetHash().ToString(), tx.vShieldedOutput.size());
+                return false;
+            }
+        }
+
         AssertLockHeld(cs_wallet);
         bool fExisted = mapWallet.count(tx.GetHash()) != 0;
         if (fExisted && !fUpdate) return false;
         auto sproutNoteData = FindMySproutNotes(tx);
-        auto saplingNoteDataAndAddressesToAdd = FindMySaplingNotes(tx, nHeight);
+        std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> saplingNoteDataAndAddressesToAdd;
+        saplingNoteDataAndAddressesToAdd = fAsyncNoteDecryption ? FindMySaplingNotesAsync(tx, nHeight) : FindMySaplingNotes(tx, nHeight);
         auto saplingNoteData = saplingNoteDataAndAddressesToAdd.first;
         auto addressesToAdd = saplingNoteDataAndAddressesToAdd.second;
         for (const auto &addressToAdd : addressesToAdd) {
@@ -2791,6 +2861,103 @@ std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> CWallet::FindMySap
                 noteData.insert(std::make_pair(op, nd));
                 break;
             }
+        }
+    }
+
+    return std::make_pair(noteData, viewingKeysToAdd);
+}
+
+static std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> DecryptSaplingNoteWorker(const Consensus::Params &consensus_params, const SaplingIncomingViewingKey &ivk, const OutputDescription &outdesc, const int &height, const uint256 &hash, const uint32_t &i)
+{
+    mapSaplingNoteData_t noteData;
+    SaplingIncomingViewingKeyMap viewingKeysToAdd;
+
+    auto result = SaplingNotePlaintext::decrypt(consensus_params, height, outdesc.encCiphertext, ivk, outdesc.ephemeralKey, outdesc.cmu);
+    if (result)
+    {
+        // We don't cache the nullifier here as computing it requires knowledge of the note position
+        // in the commitment tree, which can only be determined when the transaction has been mined.
+        SaplingOutPoint op {hash, i};
+        SaplingNoteData nd;
+        nd.ivk = ivk;
+        noteData.insert(std::make_pair(op, nd));
+
+        auto address = ivk.address(result.value().d);
+        if (address)
+        {
+            viewingKeysToAdd.insert(make_pair(address.value(), ivk));
+        }
+    }
+
+    return std::make_pair(noteData, viewingKeysToAdd);
+}
+
+/**
+ * Finds all output notes in the given transaction that have been sent to
+ * SaplingPaymentAddresses in this wallet.
+ *
+ * It should never be necessary to call this method with a CWalletTx, because
+ * the result of FindMySaplingNotes (for the addresses available at the time) will
+ * already have been cached in CWalletTx.mapSaplingNoteData.
+ */
+std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> CWallet::FindMySaplingNotesAsync(const CTransaction &tx, int height) const
+{
+    mapSaplingNoteData_t noteData;
+    SaplingIncomingViewingKeyMap viewingKeysToAdd;
+
+    if (tx.vShieldedOutput.empty())
+    {
+        return std::make_pair(noteData, viewingKeysToAdd);
+    }
+
+    LOCK(cs_KeyStore);
+
+    std::set<SaplingIncomingViewingKey> setSaplingIvkToTest;
+
+    for (const auto& [ivk, fvk] : mapSaplingFullViewingKeys)
+    {
+        setSaplingIvkToTest.insert(ivk);
+    }
+
+    for (const auto& [address, ivk] : mapSaplingIncomingViewingKeys)
+    {
+        setSaplingIvkToTest.insert(ivk);
+    }
+
+    if (setSaplingIvkToTest.empty())
+    {
+        return std::make_pair(noteData, viewingKeysToAdd);
+    }
+
+    std::vector<std::future<std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap>>> vDecryptFutures;
+    const Consensus::Params consensus_params = Params().GetConsensus();
+    uint256 hash = tx.GetHash();
+
+    // Protocol Spec: 4.19 Block Chain Scanning (Sapling)
+    for (uint32_t i = 0; i < tx.vShieldedOutput.size(); ++i)
+    {
+        const OutputDescription output = tx.vShieldedOutput[i];
+        for (SaplingIncomingViewingKey ivk : setSaplingIvkToTest)
+        {
+            vDecryptFutures.emplace_back(std::async(std::launch::async, DecryptSaplingNoteWorker, consensus_params, ivk, output, height, hash, i));
+        }
+    }
+
+    for (auto &fut : vDecryptFutures)
+    {
+        auto result_pair = fut.get();
+        if (!result_pair.first.empty())
+        {
+            noteData.insert(result_pair.first.begin(), result_pair.first.end());
+
+            for (auto [address, ivk] : result_pair.second)
+            {
+                if (mapSaplingIncomingViewingKeys.count(address) == 0)
+                {
+                    viewingKeysToAdd[address] = ivk;
+                }
+            }
+
         }
     }
 
@@ -4044,6 +4211,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
     int64_t nStartUI = GetTimeMillis();
     const Consensus::Params &consensus_params = Params().GetConsensus();
     CBlockIndex* pindex = pindexStart;
+    int64_t nRealBirthday = 0;
+
     std::set<uint256> txList;
     std::set<uint256> txListOriginal;
 
@@ -4060,14 +4229,21 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             txListOriginal.insert(wallet_item.first);
         }
 
+        int64_t nWalletBirthday = nTimeFirstKey;
+        if (nForceBirthday)
+        {
+            nWalletBirthday = nForceBirthday;
+            LogPrintf("ScanForWalletTransactions(): Alternative wallet birthday %u forced instead of %u\n", nWalletBirthday, nTimeFirstKey);
+        }
         // no need to read and scan block, if block was created before
         // our wallet birthday (as adjusted for block time variability)
-        while (!fIgnoreBirthday && pindex && nTimeFirstKey && pindex->GetBlockTime() < nTimeFirstKey - TIMESTAMP_WINDOW) {
+        while (pindex && nWalletBirthday && pindex->GetBlockTime() < nWalletBirthday - TIMESTAMP_WINDOW) {
             pindex = chainActive.Next(pindex);
         }
 
         int tip_height = chainActive.Tip()->nHeight;
         ShowProgress(_("Rescanning..."), 0);
+        LogPrintf("ScanForWalletTransactions(): Actual scanning started at height %i\n", pindex->nHeight);
 
         SproutMerkleTree sproutTree;
         SaplingMerkleTree saplingTree;
@@ -4101,7 +4277,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             {
                 uint256 txid = tx.GetHash();
 
-                if (fTxDeleteEnabled && (setExWallet.find(txid) != setExWallet.end()))
+                if (fIgnoreExTx && (setExWallet.find(txid) != setExWallet.end()))
                 {
                     LogPrint("deletetx", "Transaction %s rescan skipped, tagged as ex (previously deleted)\n", txid.ToString());
                     continue;
@@ -4112,6 +4288,11 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
                     blockInvolvesMe = true;
                     txList.insert(txid);
                     ret++;
+                    if (GetBoolArg("-rescan", false) && !nRealBirthday)
+                    {
+                        nRealBirthday = pindex->GetBlockTime();
+                        LogPrintf("ScanForWalletTransactions(): The first significant wtx appeared at height %i. Appropriate \"wallet birthday\" would be %u\n", pindex->nHeight, nRealBirthday);
+                    }
                 }
             }
 
@@ -6166,6 +6347,7 @@ std::string CWallet::GetWalletHelpString(bool showDebug)
     strUsage += HelpMessageOpt("-deleteconflicttx", _("Delete conflicted, expired and orphaned transactions (requires -deletetx=1; default: 1)"));
     strUsage += HelpMessageOpt("-keeptxnum", strprintf(_("Keep the last <n> transactions (default: %i)"), DEFAULT_TX_RETENTION_LASTTX));
     strUsage += HelpMessageOpt("-keeptxfornblocks", strprintf(_("Keep transactions for at least <n> blocks (default: %i)"), DEFAULT_TX_RETENTION_BLOCKS));
+    strUsage += HelpMessageOpt("-ignoreextx", _("Option to ignore ex wallet transactions, not to re-add them on rescan"));
     strUsage += HelpMessageOpt("-migration", _("Enable the Sprout to Sapling migration"));
     strUsage += HelpMessageOpt("-migrationdestaddress=<zaddr>", _("Set the Sapling migration address"));
     strUsage += HelpMessageOpt("-mintxfee=<amt>", strprintf(_("Fees (in %s/kB) smaller than this are considered zero fee for transaction creation (default: %s)"),
@@ -6318,6 +6500,8 @@ bool CWallet::InitLoadWallet(bool clearWitnessCaches)
         LogPrintf("keeptxfornblock is less the MAX_REORG_LENGTH, Setting to %i\n", MAX_REORG_LENGTH + 1);
         nDeleteTransactionsAfterNBlocks = MAX_REORG_LENGTH + 1;
     }
+
+    fIgnoreExTx = GetBoolArg("-ignoreextx", false);
 
     if (fFirstRun)
     {

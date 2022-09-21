@@ -135,6 +135,14 @@ static const unsigned int DEFAULT_PREFETCH_NUM_THREADS = 8;
 /** Default for -prefetchnumblocks */
 static const unsigned int DEFAULT_PREFETCH_NUM_BLOCKS = 2048;
 
+/** Default for -ignorespam */
+static const bool DEFAULT_IGNORE_SPAM = false;
+/** Default for -spamoutputsmin */
+static const int DEFAULT_SPAM_OUTPUTS_MIN = 5;
+
+/** Default for -asyncnotedecryption */
+static const bool DEFAULT_ASYNC_NOTE_DECRYPTION = true;
+
 #define equihash_parameters_acceptable(N, K) \
     ((CBlockHeader::HEADER_SIZE + equihash_solution_size(N, K))*MAX_HEADERS_RESULTS < \
      MAX_PROTOCOL_MESSAGE_LENGTH-1000)
@@ -225,7 +233,14 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 /** Block prefetch cache */
 extern bool fBlockPrefetchEnabled;
 extern unsigned int nPrefetchNumThreads;
-extern unsigned int nPrefetchNumBlocks;;
+extern unsigned int nPrefetchNumBlocks;
+
+extern int64_t nForceBirthday;
+
+extern bool fIgnoreSpam;
+extern int nSpamOutputsMin;
+
+extern bool fAsyncNoteDecryption;
 
 /** Register with a network node to receive its signals */
 void RegisterNodeSignals(CNodeSignals& nodeSignals);
