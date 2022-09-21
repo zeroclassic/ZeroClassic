@@ -140,6 +140,9 @@ static const bool DEFAULT_IGNORE_SPAM = false;
 /** Default for -spamoutputsmin */
 static const int DEFAULT_SPAM_OUTPUTS_MIN = 5;
 
+/** Default for -asyncnotedecryption */
+static const bool DEFAULT_ASYNC_NOTE_DECRYPTION = true;
+
 #define equihash_parameters_acceptable(N, K) \
     ((CBlockHeader::HEADER_SIZE + equihash_solution_size(N, K))*MAX_HEADERS_RESULTS < \
      MAX_PROTOCOL_MESSAGE_LENGTH-1000)
@@ -236,6 +239,8 @@ extern int64_t nForceBirthday;
 
 extern bool fIgnoreSpam;
 extern int nSpamOutputsMin;
+
+extern bool fAsyncNoteDecryption;
 
 /** Register with a network node to receive its signals */
 void RegisterNodeSignals(CNodeSignals& nodeSignals);
