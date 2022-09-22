@@ -4243,7 +4243,11 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 
         int tip_height = chainActive.Tip()->nHeight;
         ShowProgress(_("Rescanning..."), 0);
-        LogPrintf("ScanForWalletTransactions(): Actual scanning started at height %i\n", pindex->nHeight);
+
+        if (pindex)
+        {
+            LogPrintf("ScanForWalletTransactions(): Actual scanning started at height %i\n", pindex->nHeight);
+        }
 
         SproutMerkleTree sproutTree;
         SaplingMerkleTree saplingTree;
