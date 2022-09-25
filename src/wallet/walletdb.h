@@ -133,14 +133,14 @@ public:
     bool WritePurpose(const std::string& strAddress, const std::string& purpose);
     bool ErasePurpose(const std::string& strAddress);
 
-    //Begin Historical Wallet Tx
-    bool WriteArcTx(const CWalletTx& wtx);
+    /** Left just for zapping */
     bool EraseArcTx(uint256 hash);
-    bool WriteArcSproutOp(uint256 nullifier, JSOutPoint op);
     bool EraseArcSproutOp(uint256 nullifier);
-    bool WriteArcSaplingOp(uint256 nullifier, SaplingOutPoint op);
     bool EraseArcSaplingOp(uint256 nullifier);
-    //End Historical Wallet Tx
+
+    /** Keep the log of deleted wallet transactions */
+    bool WriteExTx(uint256 hash);
+    bool EraseExTx(uint256 hash);
 
     bool WriteTx(const CWalletTx& wtx);
     bool EraseTx(uint256 hash);
@@ -183,7 +183,7 @@ public:
 
     DBErrors ReorderTransactions(CWallet* pwallet);
     DBErrors LoadWallet(CWallet* pwallet);
-    DBErrors FindWalletTxToZap(CWallet* pwallet, std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx, std::vector<uint256>& vArcHash, std::vector<uint256>& vArcSproutNullifier, std::vector<uint256>& vArcSaplingNullifier);
+    DBErrors FindWalletTxToZap(CWallet* pwallet, std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx, std::vector<uint256>& vExTxHash, std::vector<uint256>& vArcHash, std::vector<uint256>& vArcSproutNullifier, std::vector<uint256>& vArcSaplingNullifier);
     DBErrors ZapWalletTx(CWallet* pwallet, std::vector<CWalletTx>& vWtx);
     static bool Compact(CDBEnv& dbenv, const std::string& strFile);
     static bool Recover(CDBEnv& dbenv, const std::string& filename, bool fOnlyKeys);

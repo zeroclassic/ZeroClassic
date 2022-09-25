@@ -51,9 +51,10 @@ extern bool fSendFreeTransactions;
 extern bool fPayAtLeastCustomFee;
 extern bool fTxDeleteEnabled;
 extern bool fTxConflictDeleteEnabled;
-extern int fDeleteInterval;
-extern unsigned int fDeleteTransactionsAfterNBlocks;
-extern unsigned int fKeepLastNTransactions;
+extern int nDeleteInterval;
+extern unsigned int nDeleteTransactionsAfterNBlocks;
+extern unsigned int nKeepLastNTransactions;
+extern bool fIgnoreExTx;
 
 static const unsigned int DEFAULT_KEYPOOL_SIZE = 100;
 //! -paytxfee default
@@ -82,7 +83,7 @@ static const unsigned int WITNESS_CACHE_SIZE = MAX_REORG_LENGTH + 1;
 static const size_t HD_WALLET_SEED_LENGTH = 32;
 
 //Default Transaction Rentention N-BLOCKS
-static const int DEFAULT_TX_DELETE_INTERVAL = 1000;
+static const int DEFAULT_TX_DELETE_INTERVAL = 2000;
 
 //Default Transaction Rentention N-BLOCKS
 static const unsigned int DEFAULT_TX_RETENTION_BLOCKS = 10000;
@@ -627,9 +628,6 @@ public:
 
     bool IsTrusted() const;
 
-    bool WriteArcSproutOpToDisk(CWalletDB *pwalletdb, uint256 nullifier, JSOutPoint op);
-    bool WriteArcSaplingOpToDisk(CWalletDB *pwalletdb, uint256 nullifier, SaplingOutPoint op);
-
     int64_t GetTxTime() const;
     int GetRequestCount() const;
 
@@ -846,15 +844,6 @@ public:
     int64_t NullifierCount();
     std::set<uint256> GetNullifiers();
 
-    std::map<uint256, ArchiveTxPoint> mapArcTxs;
-    void AddToArcTxs(const uint256& wtxid, const ArchiveTxPoint& ArcTxPt);
-
-    std::map<uint256, JSOutPoint> mapArcJSOutPoints;
-    void AddToArcJSOutPoints(const uint256& nullifier, const JSOutPoint& op);
-
-    std::map<uint256, SaplingOutPoint> mapArcSaplingOutPoints;
-    void AddToArcSaplingOutPoints(const uint256& nullifier, const SaplingOutPoint& op);
-
 protected:
 
     int SproutWitnessMinimumHeight(const uint256& nullifier, int nWitnessHeight, int nMinimumHeight);
@@ -863,9 +852,9 @@ protected:
     /**
      * pindex is the new tip being connected.
      */
-    int VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessOnly);
+    int VerifyAndSetInitialWitness(const CBlockIndex* pindex, bool witnessOnly, const CBlock* pblockIn);
      
-    void BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly);    
+    void BuildWitnessCache(const CBlockIndex* pindex, bool witnessOnly, const CBlock* pblockIn);
     
     void IncrementNoteWitnesses(const CBlockIndex* pindex,
                                 const CBlock* pblock,
@@ -1054,6 +1043,14 @@ public:
     std::map<uint256, SaplingOutPoint> mapSaplingNullifiersToNotes;
 
     std::map<uint256, CWalletTx> mapWallet;
+
+    std::set<uint256> setExWallet;
+    void AddToEx(const uint256& wtxid, bool fFromLoadWallet);
+
+    std::set<uint256> setSiftedSprout;
+    std::set<uint256> setSiftedSapling;
+    void AddToSifted(const uint256& wtxid);
+    void RemoveFromSifted(const uint256& wtxid);
 
     int64_t nOrderPosNext;
     std::map<uint256, int> mapRequestCount;
@@ -1254,7 +1251,6 @@ public:
     void UpdateWalletTransactionOrder(std::map<std::pair<int,int>, const uint256> &mapSorted, bool resetOrder);
     unsigned int DeleteTransactions(std::vector<uint256> &removeTxs, std::vector<uint256> &removeExpiredTxs);
     void DeleteWalletTransactions(const CBlockIndex* pindex);
-    bool initalizeArcTx();
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false, bool fIgnoreBirthday = false);
     void ReacceptWalletTransactions();
     void CheckWalletSanity(const std::string &tag);
@@ -1316,6 +1312,7 @@ public:
         uint8_t n) const;
     mapSproutNoteData_t FindMySproutNotes(const CTransaction& tx) const;
     std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> FindMySaplingNotes(const CTransaction& tx, int height) const;
+    std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> FindMySaplingNotesAsync(const CTransaction& tx, int height) const;
     bool IsSproutNullifierFromMe(const uint256& nullifier) const;
     bool IsSaplingNullifierFromMe(const uint256& nullifier) const;
 
