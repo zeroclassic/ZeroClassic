@@ -15,7 +15,6 @@
 #include "consensus/consensus.h"
 #include "consensus/upgrades.h"
 #include "consensus/validation.h"
-#include "deprecation.h"
 #include "experimental_features.h"
 #include "init.h"
 #include "key_io.h"
@@ -3528,8 +3527,6 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
     recentlyConflictedTxs.insert(std::make_pair(pindexNew, txConflicted));
     nRecentlyConflictedSequence += 1;
 
-    EnforceNodeDeprecation(pindexNew->nHeight);
-
     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;
     LogPrint("bench", "  - Connect postprocess: %.2fms [%.2fs]\n", (nTime6 - nTime5) * 0.001, nTimePostConnect * 0.000001);
     LogPrint("bench", "- Connect block: %.2fms [%.2fs]\n", (nTime6 - nTime1) * 0.001, nTimeTotal * 0.000001);
@@ -4902,8 +4899,6 @@ bool static LoadBlockIndexDB(const CChainParams& chainparams)
         chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(),
         DateTimeStrFormat("%Y-%m-%d %H:%M:%S", chainActive.Tip()->GetBlockTime()),
         Checkpoints::GuessVerificationProgress(chainparams.Checkpoints(), chainActive.Tip()));
-
-    EnforceNodeDeprecation(chainActive.Height(), true);
 
     return true;
 }

@@ -7,7 +7,6 @@
 #include "consensus/validation.h"
 #include "core_io.h"
 #include "init.h"
-#include "deprecation.h"
 #include "key_io.h"
 #include "keystore.h"
 #include "main.h"
@@ -1017,13 +1016,7 @@ UniValue signrawtransaction(const UniValue& params, bool fHelp)
     }
 
     bool fHashSingle = ((nHashType & ~SIGHASH_ANYONECANPAY) == SIGHASH_SINGLE);
-    // Use the approximate release height if it is greater so offline nodes 
-    // have a better estimation of the current height and will be more likely to
-    // determine the correct consensus branch ID.  Regtest mode ignores release height.
     int chainHeight = chainActive.Height() + 1;
-    if (Params().NetworkIDString() != "regtest") {
-        chainHeight = std::max(chainHeight, APPROX_RELEASE_HEIGHT);
-    }
     // Grab the current consensus branch ID
     auto consensusBranchId = CurrentEpochBranchId(chainHeight, Params().GetConsensus());
 

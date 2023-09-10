@@ -13,7 +13,6 @@
 #include "ui_interface.h"
 #include "util.h"
 #include "version.h"
-#include "deprecation.h"
 
 
 #include <univalue.h>
@@ -452,32 +451,6 @@ static UniValue GetNetworksInfo()
     return networks;
 }
 
-UniValue getdeprecationinfo(const UniValue& params, bool fHelp)
-{
-    const CChainParams& chainparams = Params();
-    if (fHelp || params.size() != 0 || chainparams.NetworkIDString() != "main")
-        throw runtime_error(
-            "getdeprecationinfo\n"
-            "Returns an object containing current version and deprecation block height. Applicable only on mainnet.\n"
-            "\nResult:\n"
-            "{\n"
-            "  \"version\": xxxxx,                      (numeric) the server version\n"
-            "  \"subversion\": \"/MagicBean:x.y.z[-v]/\",     (string) the server subversion string\n"
-            "  \"deprecationheight\": xxxxx,            (numeric) the block height at which this version will deprecate and shut down\n"
-            "}\n"
-            "\nExamples:\n"
-            + HelpExampleCli("getdeprecationinfo", "")
-            + HelpExampleRpc("getdeprecationinfo", "")
-        );
-
-    UniValue obj(UniValue::VOBJ);
-    obj.pushKV("version", CLIENT_VERSION);
-    obj.pushKV("subversion",
-        FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()));
-    obj.pushKV("deprecationheight", DEPRECATION_HEIGHT);
-
-    return obj;
-}
 
 UniValue getnetworkinfo(const UniValue& params, bool fHelp)
 {
@@ -657,7 +630,6 @@ static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
     { "network",            "getconnectioncount",     &getconnectioncount,     true  },
-    { "network",            "getdeprecationinfo",     &getdeprecationinfo,     true  },
     { "network",            "ping",                   &ping,                   true  },
     { "network",            "getpeerinfo",            &getpeerinfo,            true  },
     { "network",            "addnode",                &addnode,                true  },
