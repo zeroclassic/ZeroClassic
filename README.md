@@ -1,4 +1,4 @@
-ZeroClassic v4.4.3
+ZeroClassic v4.4.4
 <img align="right" width="80" height="80" src="doc/imgs/logo.png">
 ===========
 
