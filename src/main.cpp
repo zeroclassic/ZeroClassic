@@ -3240,10 +3240,13 @@ bool static FlushStateToDisk(
                 it = setDirtyFileInfo.erase(it);
             }
             std::vector<const CBlockIndex*> vBlocks;
-            vBlocks.reserve(setDirtyBlockIndex.size());
+            int current_height = chainActive.Height();
             for (set<CBlockIndex*>::iterator it = setDirtyBlockIndex.begin(); it != setDirtyBlockIndex.end(); ) {
-                vBlocks.push_back(*it);
-                it = setDirtyBlockIndex.erase(it);
+                if ((*it)->nHeight <= current_height) {
+                    vBlocks.push_back(*it);
+                    it = setDirtyBlockIndex.erase(it);
+                } else
+                    ++it;
             }
             if (!pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
                 return AbortNode(state, "Files to write to block index database");
