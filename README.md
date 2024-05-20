@@ -51,6 +51,11 @@ Build ZeroClassic along with most dependencies from source by running the follow
 ./zcutil/build.sh -j$(nproc)
 ```
 
+WhitePaper
+-------
+
+https://www.zeroclassic.org/ressource/White_Paper_ZeroClassic_20_05_24.pdf
+
 License
 -------
 
