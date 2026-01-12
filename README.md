@@ -39,10 +39,7 @@ blockchain has reached a significant size.
 Install tools and libraries:
 
 ```
- sudo apt-get install \
- build-essential pkg-config libc6-dev m4 autoconf \
- libtool ncurses-dev unzip git python3 python3-zmq \
- zlib1g-dev curl bsdmainutils automake libtinfo5 zstd
+ sudo apt-get install build-essential pkg-config libc6-dev m4 autoconf libtool libncurses-dev unzip git python3 python3-zmq zlib1g-dev curl bsdmainutils automake libtinfo6 zstd
  ```
 
 Build ZeroClassic along with most dependencies from source by running the following command:
