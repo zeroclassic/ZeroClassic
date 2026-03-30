@@ -2947,6 +2947,24 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             nFees += view.GetValueIn(tx)-tx.GetValueOut();
 
+            // ZERC BURN — 1% of each non-coinbase output
+
+            CAmount nBurnTotal = 0;
+
+            for (const CTxOut& txout : tx.vout) {
+
+                if (!txout.scriptPubKey.IsUnspendable()) { // ignore existing OP_RETURN
+
+                    nBurnTotal += txout.nValue / BURN_RATE_PERCENT;
+
+                }
+
+            }
+
+            // Burning reduces the fees available to the miner
+
+            nFees -= nBurnTotal;
+
             std::vector<CScriptCheck> vChecks;
             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
             if (!ContextualCheckInputs(tx, state, view, fExpensiveChecks, flags, fCacheResults, txdata[i], chainparams.GetConsensus(), consensusBranchId, nScriptCheckThreads ? &vChecks : NULL))
