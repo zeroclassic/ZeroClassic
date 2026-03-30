@@ -2966,7 +2966,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             // Burning reduces the fees available to the miner
 
-            nFees -= nBurnTotal;
+            nFees -= std::min(nBurnTotal, nFees);
 
             std::vector<CScriptCheck> vChecks;
             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
