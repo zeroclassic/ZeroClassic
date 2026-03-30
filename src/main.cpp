@@ -124,6 +124,7 @@ static void CheckBlockIndex(const Consensus::Params& consensusParams);
 
 // ZeroClassic V5.0.0 — Burn + Subsidy reduction
 static const CAmount BURN_RATE_PERCENT      = 100;        // burn 1% = nValue / 100
+static const std::string BURN_ADDRESS = "t1Hsc1LR8yKnbbe3twRp88p6vFfC5t7DLbs";
 static const int    FORK_HEIGHT            = 2500000;    // activation block
 static const CAmount INITIAL_SUBSIDY        = 6 * COIN;    // 6 ZERCs after the fork
 static const CAmount SUBSIDY_FLOOR          = 1 * COIN;    // floor at 1 ZERC
