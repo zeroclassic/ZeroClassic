@@ -123,13 +123,14 @@ static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned 
 static void CheckBlockIndex(const Consensus::Params& consensusParams);
 
 // ZeroClassic V5.0.0 — Burn + Subsidy reduction
-static const CAmount BURN_RATE_PERCENT      = 100;        // burn 1% = nValue / 100
-static const std::string BURN_ADDRESS = "t1Hsc1LR8yKnbbe3twRp88p6vFfC5t7DLbs";
-static const int    FORK_HEIGHT            = 2500000;    // activation block
-static const CAmount INITIAL_SUBSIDY        = 6 * COIN;    // 6 ZERCs after the fork
-static const CAmount SUBSIDY_FLOOR          = 1 * COIN;    // floor at 1 ZERC
-static const int    BLOCKS_PER_MONTH       = 21600;      // ≈ 30 days
-static const int    REDUCTION_NUMERATOR    = 985;        // 98.5% = -1.5%/mois
+
+static const CAmount BURN_RATE_PERCENT      = 100;       // 1% = nValue / 100
+static const char*   BURN_ADDRESS           = "t1Hsc1LR8yKnbbe3twRp88p6vFfC5t7DLbs";
+static const int    FORK_HEIGHT            = 2500000;   // activating block
+static const CAmount INITIAL_SUBSIDY        = 6 * COIN;   // 6 ZERC after hard fork
+static const CAmount SUBSIDY_FLOOR          = 1 * COIN;   // floor at 1 ZERC
+static const int    BLOCKS_PER_MONTH       = 43200;     // ≈ 30 days
+static const int    REDUCTION_NUMERATOR    = 985;       // 98.5% = -1.5%/mounth
 static const int    REDUCTION_DENOMINATOR  = 1000;
 
 /** Constant stuff for coinbase transactions we create: */
@@ -2004,21 +2005,37 @@ bool ReadBlockFromPrefetch(CBlock& block, const CBlockIndex* pindex, const Conse
     return block_result;
 }
 
+CScript GetBurnScript(const CChainParams& chainparams)
+
+{
+
+    static CScript burnScript;
+
+    static bool fCached = false;
+
+    if (!fCached) {
+
+        CTxDestination dest = DecodeDestination(BURN_ADDRESS, chainparams);
+
+        burnScript = GetScriptForDestination(dest);
+
+        fCached = true;
+
+    }
+
+    return burnScript;
+
+}
+
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    // Before the fork: old reward
 
     if (nHeight < FORK_HEIGHT)
 
         return 10 * COIN;
 
 
-    // Number of months since the fork
-
     int monthsElapsed = (nHeight - FORK_HEIGHT) / BLOCKS_PER_MONTH;
-
-
-    // Compound discount: 6 × (985/1000)^months
 
     CAmount nSubsidy = INITIAL_SUBSIDY;
 
@@ -2026,14 +2043,11 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 
         nSubsidy = nSubsidy * REDUCTION_NUMERATOR / REDUCTION_DENOMINATOR;
 
-        if (nSubsidy <= SUBSIDY_FLOOR) {
+        if (nSubsidy <= SUBSIDY_FLOOR)
 
-            return SUBSIDY_FLOOR; // floor reached
-
-        }
+            return SUBSIDY_FLOOR;
 
     }
-
 
     return std::max(nSubsidy, SUBSIDY_FLOOR);
 
@@ -2984,24 +2998,36 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!tx.IsCoinBase())
         {
             nFees += view.GetValueIn(tx)-tx.GetValueOut();
+			
+			           // ZERC BURN — vérifier l'output burn vers BURN_ADDRESS
 
-            // ZERC BURN — 1% of each non-coinbase output
+            CScript burnScript = GetBurnScript(chainparams);
 
-            CAmount nBurnTotal = 0;
+            CAmount nExpectedBurn = 0;
+
+            CAmount nActualBurn   = 0;
 
             for (const CTxOut& txout : tx.vout) {
 
-                if (!txout.scriptPubKey.IsUnspendable()) { // ignore existing OP_RETURN
+                if (txout.scriptPubKey != burnScript)
 
-                    nBurnTotal += txout.nValue / BURN_RATE_PERCENT;
+                    nExpectedBurn += txout.nValue / BURN_RATE_PERCENT;
 
-                }
+                else
+
+                    nActualBurn += txout.nValue;
 
             }
 
-            // Burning reduces the fees available to the miner
+            if (fCheckTransactions && nActualBurn < nExpectedBurn)
 
-            nFees -= std::min(nBurnTotal, nFees);
+                return state.DoS(100,
+
+                    error("ConnectBlock(): burn insuffisant (attendu=%d recu=%d)",
+
+                          nExpectedBurn, nActualBurn),
+
+                    REJECT_INVALID, "bad-burn-output");
 
             std::vector<CScriptCheck> vChecks;
             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
