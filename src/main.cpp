@@ -122,8 +122,14 @@ void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
 static void CheckBlockIndex(const Consensus::Params& consensusParams);
 
-//Burning rate V5.0.0
-static const CAmount BURN_RATE_PERCENT = 100; // 1% = nValue / 100
+// ZeroClassic V5.0.0 — Burn + Subsidy reduction
+static const CAmount BURN_RATE_PERCENT      = 100;        // burn 1% = nValue / 100
+static const int    FORK_HEIGHT            = 2500000;    // activation block
+static const CAmount INITIAL_SUBSIDY        = 6 * COIN;    // 6 ZERCs after the fork
+static const CAmount SUBSIDY_FLOOR          = 1 * COIN;    // floor at 1 ZERC
+static const int    BLOCKS_PER_MONTH       = 21600;      // ≈ 30 days
+static const int    REDUCTION_NUMERATOR    = 985;        // 98.5% = -1.5%/mois
+static const int    REDUCTION_DENOMINATOR  = 1000;
 
 /** Constant stuff for coinbase transactions we create: */
 CScript COINBASE_FLAGS;
