@@ -130,7 +130,7 @@ static const int    FORK_HEIGHT            = 2500000;   // activating block
 static const CAmount INITIAL_SUBSIDY        = 6 * COIN;   // 6 ZERC after hard fork
 static const CAmount SUBSIDY_FLOOR          = 1 * COIN;   // floor at 1 ZERC
 static const int    BLOCKS_PER_MONTH       = 43200;     // ≈ 30 days
-static const int    REDUCTION_NUMERATOR    = 985;       // 98.5% = -1.5%/mounth
+static const int    REDUCTION_NUMERATOR    = 985;       // 98.5% = -1.5%/month
 static const int    REDUCTION_DENOMINATOR  = 1000;
 
 /** Constant stuff for coinbase transactions we create: */
