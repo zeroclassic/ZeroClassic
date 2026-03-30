@@ -2015,7 +2015,8 @@ CScript GetBurnScript(const CChainParams& chainparams)
 
     if (!fCached) {
 
-        CTxDestination dest = DecodeDestination(BURN_ADDRESS, chainparams);
+        KeyIO keyIO(chainparams);
+		CTxDestination dest = keyIO.DecodeDestination(BURN_ADDRESS);
 
         burnScript = GetScriptForDestination(dest);
 
