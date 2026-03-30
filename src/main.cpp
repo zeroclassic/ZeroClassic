@@ -2005,9 +2005,37 @@ bool ReadBlockFromPrefetch(CBlock& block, const CBlockIndex* pindex, const Conse
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    CAmount nSubsidy = 10 * COIN;
+    // Before the fork: old reward
 
-    return nSubsidy;
+    if (nHeight < FORK_HEIGHT)
+
+        return 10 * COIN;
+
+
+    // Number of months since the fork
+
+    int monthsElapsed = (nHeight - FORK_HEIGHT) / BLOCKS_PER_MONTH;
+
+
+    // Compound discount: 6 × (985/1000)^months
+
+    CAmount nSubsidy = INITIAL_SUBSIDY;
+
+    for (int i = 0; i < monthsElapsed; i++) {
+
+        nSubsidy = nSubsidy * REDUCTION_NUMERATOR / REDUCTION_DENOMINATOR;
+
+        if (nSubsidy <= SUBSIDY_FLOOR) {
+
+            return SUBSIDY_FLOOR; // floor reached
+
+        }
+
+    }
+
+
+    return std::max(nSubsidy, SUBSIDY_FLOOR);
+
 }
 
 bool IsInitialBlockDownload(const Consensus::Params& params)
