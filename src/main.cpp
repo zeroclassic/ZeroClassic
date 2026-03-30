@@ -122,6 +122,9 @@ void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
 static void CheckBlockIndex(const Consensus::Params& consensusParams);
 
+//Burning rate V5.0.0
+static const CAmount BURN_RATE_PERCENT = 100; // 1% = nValue / 100
+
 /** Constant stuff for coinbase transactions we create: */
 CScript COINBASE_FLAGS;
 
