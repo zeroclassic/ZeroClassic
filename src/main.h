@@ -581,4 +581,16 @@ std::pair<std::map<CBlockIndex*, std::list<CTransaction>>, uint64_t> DrainRecent
 void SetChainNotifiedSequence(const CChainParams& chainparams, uint64_t recentlyConflictedSequence);
 bool ChainIsFullyNotified(const CChainParams& chainparams);
 
+// ZeroClassic V5.0.0 — Burn + Subsidy reduction
+static const CAmount BURN_RATE_PERCENT     = 100;
+static const char*   BURN_ADDRESS          = "tmEd6SqJ131bfLwRZLsswsEMgfwNg8aSxTY"; //t1Hsc1LR8yKnbbe3twRp88p6vFfC5t7DLbs
+static const int     FORK_HEIGHT           = 100; //2500000
+static const CAmount INITIAL_SUBSIDY       = 6 * COIN;
+static const CAmount SUBSIDY_FLOOR         = 1 * COIN;
+static const int     BLOCKS_PER_MONTH      = 43200;
+static const int     REDUCTION_NUMERATOR   = 985;
+static const int     REDUCTION_DENOMINATOR = 1000;
+
+CScript GetBurnScript(const CChainParams& chainparams);
+
 #endif // BITCOIN_MAIN_H
