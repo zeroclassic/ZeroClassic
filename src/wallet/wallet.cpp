@@ -5262,6 +5262,10 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     dPriority += (double)nCredit * age;
                 }
 
+				CAmount nChange = nValueIn - nValue;
+                if (nSubtractFeeFromAmount == 0)
+                    nChange -= nFeeRet;
+
                 if (nChange > 0)
                 {
                     // Fill a vout to ourself
