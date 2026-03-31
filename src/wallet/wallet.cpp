@@ -5258,9 +5258,15 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     dPriority += (double)nCredit * age;
                 }
 
-                CAmount nChange = nValueIn - nValue;
-                if (nSubtractFeeFromAmount == 0)
-                    nChange -= nFeeRet;
+                CAmount nTotalValue = nValue;
+				if (nSubtractFeeFromAmount == 0)
+					nTotalValue += nFeeRet;
+				
+				// ZERC BURN — anticiper le burn dans nTotalValue avant SelectCoins
+				// On estime le burn à 1% de nValue (approximation conservative)
+				if (nextBlockHeight >= FORK_HEIGHT) {
+					nTotalValue += nValue / BURN_RATE_PERCENT;
+				}
 
                 if (nChange > 0)
                 {
@@ -5372,8 +5378,6 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     if (nBurnTotal > 0) {
                         CTxOut burnOut(nBurnTotal, burnScript);
                         txNew.vout.push_back(burnOut);
-                        nValue += nBurnTotal;
-                        nTotalValue += nBurnTotal;
                     }
                 }
 				
