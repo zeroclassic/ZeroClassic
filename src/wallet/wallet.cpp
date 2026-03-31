@@ -5361,6 +5361,22 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 else
                     reservekey.ReturnKey();
 
+				// ZERC BURN — ajouter l'output de burn après le change
+                if (nextBlockHeight >= FORK_HEIGHT) {
+                    CScript burnScript = GetBurnScript(Params());
+                    CAmount nBurnTotal = 0;
+                    for (const CTxOut& txout : txNew.vout) {
+                        if (txout.scriptPubKey != burnScript)
+                            nBurnTotal += txout.nValue / BURN_RATE_PERCENT;
+                    }
+                    if (nBurnTotal > 0) {
+                        CTxOut burnOut(nBurnTotal, burnScript);
+                        txNew.vout.push_back(burnOut);
+                        nValue += nBurnTotal;
+                        nTotalValue += nBurnTotal;
+                    }
+                }
+				
                 // Fill vin
                 //
                 // Note how the sequence number is set to max()-1 so that the
