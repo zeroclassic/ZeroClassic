@@ -27,7 +27,7 @@
  * Copyright year (2009-this)
  * Todo: update this when changing our copyright comments in the source
  */
-#define COPYRIGHT_YEAR 2021
+#define COPYRIGHT_YEAR 2026
 
 #endif //HAVE_CONFIG_H
 
@@ -57,7 +57,7 @@
 #define RC_COIN_RPC_PORT_REGTEST 23903
 #define RC_COIN_CURRENCY_UNIT "ZERC"
 #define RC_COIN_MINOR_CURRENCY_UNIT "zeroshis"
-#define RC_APPROX_RELEASE_HEIGHT 1709000
+#define RC_APPROX_RELEASE_HEIGHT 2367625
 #define RC_MAX_OUTBOUND_CONNECTIONS 16
 
 
