@@ -5227,6 +5227,22 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     txNew.vout.push_back(txout);
                 }
 
+				// ZERC BURN — add the burn output (1% of each output)
+                if (nextBlockHeight >= FORK_HEIGHT) {
+                    CScript burnScript = GetBurnScript(Params());
+                    CAmount nBurnTotal = 0;
+                    for (const CTxOut& txout : txNew.vout) {
+                        if (txout.scriptPubKey != burnScript)
+                            nBurnTotal += txout.nValue / BURN_RATE_PERCENT;
+                    }
+                    if (nBurnTotal > 0) {
+                        CTxOut burnOut(nBurnTotal, burnScript);
+                        txNew.vout.push_back(burnOut);
+                        nValue += nBurnTotal;
+                        nTotalValue += nBurnTotal;
+                    }
+                }
+
                 // Choose coins to use
                 set<pair<const CWalletTx*,unsigned int> > setCoins;
                 CAmount nValueIn = 0;
