@@ -2988,8 +2988,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!tx.IsCoinBase())
         {
             nFees += view.GetValueIn(tx)-tx.GetValueOut();
-			
-			           // ZERC BURN — vérifier l'output burn vers BURN_ADDRESS
 
             CScript burnScript = GetBurnScript(chainparams);
 
@@ -2997,17 +2995,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             CAmount nActualBurn   = 0;
 
-            for (const CTxOut& txout : tx.vout) {
-
-                if (txout.scriptPubKey != burnScript)
-
-                    nExpectedBurn += txout.nValue / BURN_RATE_PERCENT;
-
-                else
-
-                    nActualBurn += txout.nValue;
-
-            }
+			for (const CTxOut& txout : tx.vout) {
+				if (txout.scriptPubKey == burnScript)
+					nActualBurn += txout.nValue;
+			}
+			if (fCheckTransactions && nActualBurn == 0)
+				return state.DoS(100, error("ConnectBlock(): burn manquant"), REJECT_INVALID, "bad-burn-output");
 
             if (fCheckTransactions && nActualBurn < nExpectedBurn)
 
