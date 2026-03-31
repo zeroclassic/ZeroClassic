@@ -2985,35 +2985,25 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
         txdata.emplace_back(tx);
 
-        if (!tx.IsCoinBase())
+		if (!tx.IsCoinBase())
         {
             nFees += view.GetValueIn(tx)-tx.GetValueOut();
 
-            CScript burnScript = GetBurnScript(chainparams);
-
-            CAmount nExpectedBurn = 0;
-
-            CAmount nActualBurn   = 0;
-
-			for (const CTxOut& txout : tx.vout) {
-				if (txout.scriptPubKey == burnScript)
-					nActualBurn += txout.nValue;
-			}
-			if (fCheckTransactions && nActualBurn == 0)
-				return state.DoS(100, error("ConnectBlock(): burn manquant"), REJECT_INVALID, "bad-burn-output");
-
-            if (fCheckTransactions && nActualBurn < nExpectedBurn)
-
-                return state.DoS(100,
-
-                    error("ConnectBlock(): burn insuffisant (attendu=%d recu=%d)",
-
-                          nExpectedBurn, nActualBurn),
-
-                    REJECT_INVALID, "bad-burn-output");
+            // ZERC BURN — vérifier uniquement après le fork
+            if (pindex->nHeight >= FORK_HEIGHT) {
+                CScript burnScript = GetBurnScript(chainparams);
+                CAmount nActualBurn = 0;
+                for (const CTxOut& txout : tx.vout) {
+                    if (txout.scriptPubKey == burnScript)
+                        nActualBurn += txout.nValue;
+                }
+                if (fCheckTransactions && nActualBurn == 0)
+                    return state.DoS(100, error("ConnectBlock(): burn manquant"),
+                                     REJECT_INVALID, "bad-burn-output");
+            }
 
             std::vector<CScriptCheck> vChecks;
-            bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
+            bool fCacheResults = fJustCheck;
             if (!ContextualCheckInputs(tx, state, view, fExpensiveChecks, flags, fCacheResults, txdata[i], chainparams.GetConsensus(), consensusBranchId, nScriptCheckThreads ? &vChecks : NULL))
                 return false;
             control.Add(vChecks);
