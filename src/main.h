@@ -591,6 +591,8 @@ static const int     BLOCKS_PER_MONTH      = 43200;
 static const int     REDUCTION_NUMERATOR   = 985;
 static const int     REDUCTION_DENOMINATOR = 1000;
 
+int GetCoinbaseMaturity(int nHeight);
+
 CScript GetBurnScript(const CChainParams& chainparams);
 
 #endif // BITCOIN_MAIN_H
