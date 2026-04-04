@@ -2017,6 +2017,10 @@ CScript GetBurnScript(const CChainParams& chainparams)
 
 }
 
+int GetCoinbaseMaturity(int nHeight) {
+    return (nHeight >= FORK_HEIGHT) ? COINBASE_MATURITY_NEW : COINBASE_MATURITY_LEGACY;
+}
+
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
 
@@ -2335,7 +2339,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
 
             if (coins->IsCoinBase()) {
                 // Ensure that coinbases are matured
-                if (nSpendHeight - coins->nHeight < COINBASE_MATURITY) {
+               if (nSpendHeight - coins->nHeight < GetCoinbaseMaturity(coins->nHeight)) {
                     return state.Invalid(
                         error("CheckInputs(): tried to spend coinbase at depth %d", nSpendHeight - coins->nHeight),
                         REJECT_INVALID, "bad-txns-premature-spend-of-coinbase");
