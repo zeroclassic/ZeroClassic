@@ -3988,7 +3988,7 @@ void CWallet::DeleteWalletTransactions(const CBlockIndex* pindex)
                             if (mi_orphan != mapBlockIndex.end())
                             {
                                 CBlockIndex *pindex_orphan = mi_orphan->second;
-                                if (pindex->nHeight > pindex_orphan->nHeight + COINBASE_MATURITY)
+                                if (pindex->nHeight > pindex_orphan->nHeight + GetCoinbaseMaturity(pindex_orphan->nHeight))
                                 {
                                     LogPrint("deletetx", "Orphan coinbase wtx %s marked for eviction\n", wtxid.ToString());
                                     removeExpiredTxs.push_back(wtxid);
@@ -6746,7 +6746,8 @@ int CMerkleTx::GetBlocksToMaturity() const
 {
     if (!IsCoinBase())
         return 0;
-    return max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
+    int nMaturity = GetCoinbaseMaturity(chainActive.Height());
+	return max(0, (nMaturity+1) - GetDepthInMainChain());
 }
 
 
