@@ -25,7 +25,7 @@ connection, the synchronization process could take a day or more once the
 blockchain has reached a significant size.
 
 <p align="center">
-  <img src="doc/imgs/screenshot.png" height="500">
+  <img src="doc/imgs/zercnova.png" height="500">
 </p>
 
 **ZeroClassic is experimental and a work in progress.** Use it at your own risk.
