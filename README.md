@@ -1,204 +1,62 @@
-# ZercWallet v2.0
+ZeroClassic v4.4.4
+<img align="right" width="80" height="80" src="doc/imgs/logo.png">
+===========
 
-Desktop wallet for **ZeroClassic (ZERC)** — compatible with node Phoenix 5.0.0-beta2.
-Built with Electron 28 + React 18 + TypeScript. Runs on **Windows**, **Linux** and **macOS**.
+What is ZeroClassic?
+--------------
 
----
+[ZeroClassic](https://zeroclassic.org/) is an implementation of the "Zerocash" protocol.
+Based on Zcash code, ZeroClassic intends to offer the same standard of privacy
+through a sophisticated zero-knowledge proving scheme that preserves
+confidentiality of transaction metadata. 
 
-## Features
+What differentiates ZeroClassic from Zcash?
+--------------
 
-- 🔵 **Transparent addresses** (T-addr) — standard transactions
-- 🔒 **Shielded addresses** (Z-addr) — private via zk-SNARKs
-- 📊 **Dashboard** — balance, node stats, recent transactions
-- ↑ **Send** — transparent & shielded transactions with memo support
-- ↓ **Receive** — address display with QR code + copy
-- 📋 **Transactions** — full history with filters, from/to addresses and explorer links
-- ⊞ **Addresses** — manage T and Z addresses
-- 🔑 **Keys & Backup** — export/import private keys, backup wallet
-- 🔧 **Tools** — shield coinbase, merge UTXOs, wallet info
-- ⚙ **Settings** — configurable RPC connection, node auto-start
-- 🔄 **Auto-refresh** on every new block
+* No developer fees, founder rewards, funding streams or similar rules imposed to tax miners,
+* No "engineered scarcity" known as "halving", you are never "late to the party",
+* Proof of Work algorithm Equihash (n=192, k=7) still resists ASICs,
+* The team is not backed up by any company, we are just few people with passion for technology, freedom and privacy.
 
----
 
-## Prerequisites
+This software is the ZeroClassic client. It downloads and stores the entire history
+of ZeroClassic transactions; depending on the speed of your computer and network
+connection, the synchronization process could take a day or more once the
+blockchain has reached a significant size.
 
-| Tool | Version |
-|------|---------|
-| Node.js | ≥ 18.x |
-| npm | ≥ 9.x |
-| zerod | Phoenix 5.0.0-beta2 |
+<p align="center">
+  <img src="doc/imgs/screenshot.png" height="500">
+</p>
 
-> **Windows**: Download Node.js from https://nodejs.org (LTS version).
-> Verify installation: `node -v` and `npm -v` in PowerShell.
+**ZeroClassic is experimental and a work in progress.** Use it at your own risk.
 
----
+### Need Help?
 
-## Node configuration
+* :speech_balloon: Join our community on [Discord](https://discord.gg/p4zdbhMrhy)
 
-In `%APPDATA%\ZeroClassic\zero.conf` on Windows, or `~/.zeroclassic/zero.conf` on Linux:
+### Building
 
-```conf
-server=1
-listen=1
-rpcuser=your_rpc_user
-rpcpassword=your_rpc_password
-rpcport=10004
-rpcbind=127.0.0.1
-rpcallowip=127.0.0.1
-rpctimeout=60
-dbcache=512
-par=4
-gen=0
-```
-
-Optional — enables fast transaction indexing (recommended for heavy wallets):
-```conf
-addressindex=1
-spentindex=1
-timestampindex=1
-```
-
-> ZercWallet **auto-detects** this file on first launch and pre-fills the Settings.
-
----
-
-## Development
-
-### Windows (PowerShell)
-
-```powershell
-cd zerc-wallet
-npm install
-
-# Terminal 1 — compile in watch mode
-npm run dev
-
-# Terminal 2 — launch Electron (wait for Vite to be ready first)
-npm run electron:dev
-```
-
-### Linux / macOS
-
-```bash
-npm install
-npm run dev &
-npm run electron:dev
-```
-
----
-
-## Build & distribute
-
-### Windows
-```powershell
-npm install
-npm run dist:win
-```
-Generates in `release/`:
-- `ZercWallet Setup X.X.X.exe` — NSIS installer with desktop shortcut
-- `ZercWallet X.X.X.exe` — portable executable
-
-### Linux
-```bash
-npm install
-chmod -R +x node_modules/.bin/
-chmod +x node_modules/app-builder-bin/linux/x64/app-builder
-chmod +x node_modules/7zip-bin/linux/x64/7za
-npm run dist:linux
-```
-Generates in `release/`:
-- `ZercWallet-X.X.X.AppImage` — universal (x64)
-- `ZercWallet-X.X.X-arm64.AppImage` — ARM64
-- `zerc-wallet_X.X.X_amd64.deb` — Debian/Ubuntu (x64)
-- `zerc-wallet_X.X.X_arm64.deb` — Debian/Ubuntu (ARM64)
-
----
-
-## Versioning
-
-To update the version, edit **only** `package.json`:
-
-```json
-{
-  "version": "2.1.0",
-  "zerc": {
-    "targetNode": "Phoenix 5.0.0"
-  }
-}
-```
-
-The version is automatically injected into the app at build time — no other files to change.
-
----
-
-## Project structure
+Install tools and libraries:
 
 ```
-zerc-wallet/
-├── src/
-│   ├── main/                   ← Electron main process (Node.js)
-│   │   ├── main.ts             ← Entry point + IPC handlers
-│   │   ├── rpc.ts              ← JSON-RPC client for zerod
-│   │   ├── config.ts           ← Config manager + auto-detection
-│   │   ├── nodeManager.ts      ← zerod auto-start/stop
-│   │   └── preload.ts          ← Secure bridge → window.zerc API
-│   ├── renderer/               ← React UI
-│   │   ├── App.tsx             ← Root component + routing
-│   │   ├── hooks/
-│   │   │   └── useWallet.ts    ← Data fetching + block-based polling
-│   │   ├── components/
-│   │   │   ├── TitleBar.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── ErrorScreen.tsx
-│   │   │   └── LoadingScreen.tsx
-│   │   └── pages/
-│   │       ├── Dashboard.tsx
-│   │       ├── Send.tsx
-│   │       ├── Receive.tsx
-│   │       ├── Transactions.tsx
-│   │       ├── Addresses.tsx
-│   │       ├── Keys.tsx
-│   │       ├── Tools.tsx
-│   │       └── Settings.tsx
-│   └── shared/
-│       └── types.ts            ← Shared TypeScript types + IPC constants
-├── build/
-│   ├── icons/                  ← App icons (multiple sizes)
-│   └── scripts/                ← Post-install scripts for .deb
-├── resources/                  ← App icon source
-├── index.html
-├── vite.config.ts
-├── tsconfig.json
-├── tsconfig.main.json
-└── package.json
+ sudo apt-get install \
+ build-essential pkg-config libc6-dev m4 autoconf \
+ libtool ncurses-dev unzip git python3 python3-zmq \
+ zlib1g-dev curl bsdmainutils automake libtinfo5 zstd
+ ```
+
+Build ZeroClassic along with most dependencies from source by running the following command:
+
+```
+./zcutil/build.sh -j$(nproc)
 ```
 
----
+WhitePaper
+-------
 
-## Configuration file
+https://www.zeroclassic.org/ressource/White_Paper_ZeroClassic_20_05_24.pdf
 
-ZercWallet saves its config to:
-- **Windows**: `%APPDATA%\zerc-wallet\config.json`
-- **Linux/macOS**: `~/.zerc-wallet/config.json`
+License
+-------
 
----
-
-## Security
-
-- **Context isolation** enabled — renderer has no direct Node.js access
-- All IPC calls go through the typed `window.zerc` API (preload bridge)
-- RPC credentials stored locally in the config file above
-- No telemetry, no external connections
-
----
-
-## License
-
-MIT — ZeroClassic Community
-
-## Links
-
-- Website: https://zeroclassic.org
-- GitHub: https://github.com/zeroclassic/ZercWalletV2
-- Explorer: https://explorer.zeroclassic.org
+For license information see the file [COPYING](COPYING).
