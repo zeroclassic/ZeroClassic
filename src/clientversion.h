@@ -47,7 +47,7 @@
 #define RC_COIN_NAME "ZeroClassic"
 #define RC_COIN_NAME_LOWERCASE "zeroclassic"
 #define RC_COIN_NICKNAME "zero"
-#define RC_COIN_CLIENT_NAME "ZeroNOVA"
+#define RC_COIN_CLIENT_NAME "ZercNOVA"
 #define RC_COIN_DAEMON_EXECUTABLE "zerod"
 #define RC_COIN_CLI_EXECUTABLE "zero-cli"
 #define RC_COIN_TX_EXECUTABLE "zero-tx" 
