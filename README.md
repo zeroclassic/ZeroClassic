@@ -49,7 +49,7 @@ git clone https://github.com/zeroclassic/ZeroClassic.git
 ./zcutil/build.sh -j$(nproc)
 ```
 
-Active param ZKsnark:
+Enable zk-SNARKs settings:
 
 ```
 ./zcutil/fetch-params.sh
