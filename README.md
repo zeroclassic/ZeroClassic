@@ -45,10 +45,11 @@ sudo apt-get install build-essential pkg-config libc6-dev m4 autoconf libtool li
 Build ZeroClassic along with most dependencies from source by running the following command:
 
 ```
+git clone https://github.com/zeroclassic/ZeroClassic.git
 ./zcutil/build.sh -j$(nproc)
 ```
 
-Fetch Param:
+Active param ZKsnark:
 
 ```
 ./zcutil/fetch-params.sh
