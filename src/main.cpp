@@ -1496,6 +1496,18 @@ bool AcceptToMemoryPool(
         return state.DoS(100, error("AcceptToMemoryPool: coinbase as individual tx"),
                          REJECT_INVALID, "coinbase");
 
+    // Post-fork: reject transactions without burn output
+    if (nextBlockHeight >= FORK_HEIGHT) {
+        CScript burnScript = GetBurnScript(chainparams);
+        bool hasBurn = false;
+        for (const CTxOut& txout : tx.vout) {
+            if (txout.scriptPubKey == burnScript) { hasBurn = true; break; }
+        }
+        if (!hasBurn)
+            return state.DoS(0, error("AcceptToMemoryPool: missing burn output"),
+                             REJECT_INVALID, "bad-burn-output");
+    }
+
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     string reason;
     if (chainparams.RequireStandard() && !IsStandardTx(tx, reason, chainparams, nextBlockHeight))
