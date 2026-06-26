@@ -1,4 +1,4 @@
-ZeroClassic v5.1.1-RC1
+ZeroClassic v5.1.2-RC1
 <img align="right" width="80" height="80" src="doc/imgs/logo.png">
 ===========
 
