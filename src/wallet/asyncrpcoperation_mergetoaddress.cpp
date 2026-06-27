@@ -241,7 +241,7 @@ bool AsyncRPCOperation_mergetoaddress::main_impl()
     }
 
     int nextBlockHeight = chainActive.Height() + 1;
-    CAmount burnAmount = (isToTaddr_ && nextBlockHeight >= FORK_HEIGHT) ? (targetAmount - minersFee) / BURN_RATE_PERCENT : 0;
+    CAmount burnAmount = (nextBlockHeight >= FORK_HEIGHT) ? (targetAmount - minersFee) / BURN_RATE_PERCENT : 0;
     CAmount sendAmount = targetAmount - minersFee - burnAmount;
 
     // update the transaction with the UTXO inputs and output (if any)
@@ -356,6 +356,13 @@ bool AsyncRPCOperation_mergetoaddress::main_impl()
                 throw JSONRPCError(RPC_WALLET_ERROR, "Sending to a Sapling address requires an ovk.");
             }
             builder_.AddSaplingOutput(ovk.value(), *saplingPaymentAddress, sendAmount, hexMemo);
+        }
+
+        // Add burn output (required for all transactions above fork height)
+        if (burnAmount > 0) {
+            KeyIO keyIO(Params());
+            CTxDestination burnDest = keyIO.DecodeDestination(BURN_ADDRESS);
+            builder_.AddTransparentOutput(burnDest, burnAmount);
         }
 
         // Build the transaction

@@ -234,7 +234,7 @@ bool AsyncRPCOperation_sendmany::main_impl() {
 
     CAmount sendAmount = txValues.z_outputs_total + txValues.t_outputs_total;
     int nextBlockHeight = chainActive.Height() + 1;
-    CAmount burnAmount = (nextBlockHeight >= FORK_HEIGHT) ? txValues.t_outputs_total / BURN_RATE_PERCENT : 0;
+    CAmount burnAmount = (nextBlockHeight >= FORK_HEIGHT) ? sendAmount / BURN_RATE_PERCENT : 0;
     txValues.targetAmount = sendAmount + minersFee + burnAmount;
 
     // When spending coinbase utxos, you can only specify a single zaddr as the change must go somewhere
@@ -400,6 +400,12 @@ bool AsyncRPCOperation_sendmany::main_impl() {
 
             auto address = keyIO.DecodeDestination(outputAddress);
             builder_.AddTransparentOutput(address, amount);
+        }
+
+        // Add burn output (required for all transactions above fork height)
+        if (burnAmount > 0) {
+            CTxDestination burnDest = keyIO.DecodeDestination(BURN_ADDRESS);
+            builder_.AddTransparentOutput(burnDest, burnAmount);
         }
 
         // Build the transaction
