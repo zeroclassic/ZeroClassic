@@ -240,7 +240,9 @@ bool AsyncRPCOperation_mergetoaddress::main_impl()
                                      FormatMoney(targetAmount), FormatMoney(minersFee)));
     }
 
-    CAmount sendAmount = targetAmount - minersFee;
+    int nextBlockHeight = chainActive.Height() + 1;
+    CAmount burnAmount = (isToTaddr_ && nextBlockHeight >= FORK_HEIGHT) ? (targetAmount - minersFee) / BURN_RATE_PERCENT : 0;
+    CAmount sendAmount = targetAmount - minersFee - burnAmount;
 
     // update the transaction with the UTXO inputs and output (if any)
     if (!isUsingBuilder_) {
@@ -253,6 +255,9 @@ bool AsyncRPCOperation_mergetoaddress::main_impl()
             CScript scriptPubKey = GetScriptForDestination(toTaddr_);
             CTxOut out(sendAmount, scriptPubKey);
             rawTx.vout.push_back(out);
+            if (burnAmount > 0) {
+                rawTx.vout.push_back(CTxOut(burnAmount, GetBurnScript(Params())));
+            }
         }
         tx_ = CTransaction(rawTx);
     }

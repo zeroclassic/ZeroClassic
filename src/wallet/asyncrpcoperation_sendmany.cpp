@@ -233,7 +233,9 @@ bool AsyncRPCOperation_sendmany::main_impl() {
     }
 
     CAmount sendAmount = txValues.z_outputs_total + txValues.t_outputs_total;
-    txValues.targetAmount = sendAmount + minersFee;
+    int nextBlockHeight = chainActive.Height() + 1;
+    CAmount burnAmount = (nextBlockHeight >= FORK_HEIGHT) ? txValues.t_outputs_total / BURN_RATE_PERCENT : 0;
+    txValues.targetAmount = sendAmount + minersFee + burnAmount;
 
     // When spending coinbase utxos, you can only specify a single zaddr as the change must go somewhere
     // and if there are multiple zaddrs, we don't know where to send it.
@@ -430,8 +432,14 @@ bool AsyncRPCOperation_sendmany::main_impl() {
         add_taddr_outputs_to_tx();
 
         CAmount funds = txValues.t_inputs_total;
-        CAmount fundsSpent = txValues.t_outputs_total + minersFee;
+        CAmount fundsSpent = txValues.t_outputs_total + minersFee + burnAmount;
         CAmount change = funds - fundsSpent;
+
+        if (burnAmount > 0) {
+            CMutableTransaction rawTx(tx_);
+            rawTx.vout.push_back(CTxOut(burnAmount, GetBurnScript(Params())));
+            tx_ = CTransaction(rawTx);
+        }
 
         CReserveKey keyChange(pwalletMain);
         if (change > 0) {
@@ -507,8 +515,14 @@ bool AsyncRPCOperation_sendmany::main_impl() {
         add_taddr_outputs_to_tx();
 
         CAmount funds = txValues.t_inputs_total;
-        CAmount fundsSpent = txValues.t_outputs_total + minersFee + txValues.z_outputs_total;
+        CAmount fundsSpent = txValues.t_outputs_total + minersFee + txValues.z_outputs_total + burnAmount;
         CAmount change = funds - fundsSpent;
+
+        if (burnAmount > 0) {
+            CMutableTransaction rawTx(tx_);
+            rawTx.vout.push_back(CTxOut(burnAmount, GetBurnScript(Params())));
+            tx_ = CTransaction(rawTx);
+        }
 
         CReserveKey keyChange(pwalletMain);
         if (change > 0) {
@@ -583,6 +597,12 @@ bool AsyncRPCOperation_sendmany::main_impl() {
     if (txValues.t_outputs_total > 0) {
         add_taddr_outputs_to_tx();
         vpubNewTarget += txValues.t_outputs_total;
+        if (burnAmount > 0) {
+            CMutableTransaction rawTx(tx_);
+            rawTx.vout.push_back(CTxOut(burnAmount, GetBurnScript(Params())));
+            tx_ = CTransaction(rawTx);
+            vpubNewTarget += burnAmount;
+        }
     }
 
     // Keep track of treestate within this transaction
