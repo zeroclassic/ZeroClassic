@@ -464,6 +464,17 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const MinerAddre
             if (!ContextualCheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata, chainparams.GetConsensus(), consensusBranchId))
                 continue;
 
+            // Post-fork: skip transactions without burn output
+            if (nHeight >= FORK_HEIGHT) {
+                CScript burnScript = GetBurnScript(chainparams);
+                bool hasBurn = false;
+                for (const CTxOut& txout : tx.vout) {
+                    if (txout.scriptPubKey == burnScript) { hasBurn = true; break; }
+                }
+                if (!hasBurn)
+                    continue;
+            }
+
             if (chainparams.ZIP209Enabled() && monitoring_pool_balances) {
                 // Does this transaction lead to a turnstile violation?
 
