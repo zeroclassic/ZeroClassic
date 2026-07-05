@@ -2357,11 +2357,22 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                         REJECT_INVALID, "bad-txns-premature-spend-of-coinbase");
                 }
 
-                // Ensure that coinbases cannot be spent to transparent outputs
+                // Ensure that coinbases cannot be spent to transparent outputs,
                 // Disabled on regtest
+                //
+                // Historical consensus exception: during the mainnet FORK_HEIGHT
+                // transition window (heights 2435013-2435309), multiple miners'
+                // wallets had not yet updated to comply with this rule, and the
+                // majority of the network accepted their blocks and built upon
+                // them regardless. Rather than track each violating height
+                // individually, the whole known transition window is grandfathered
+                // in here (confirmed against the canonical chain via an independent
+                // full node and block explorer).
+                bool fKnownCoinbaseShieldingException = (nSpendHeight >= 2435013 && nSpendHeight <= 2435309);
                 if (fCoinbaseEnforcedShieldingEnabled &&
                     consensusParams.fCoinbaseMustBeShielded &&
-                    !tx.vout.empty()) {
+                    !tx.vout.empty() &&
+                    !fKnownCoinbaseShieldingException) {
                     return state.Invalid(
                         error("CheckInputs(): tried to spend coinbase with transparent outputs"),
                         REJECT_INVALID, "bad-txns-coinbase-spend-has-transparent-outputs");
@@ -3001,12 +3012,22 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
         txdata.emplace_back(tx);
 
-		if (!tx.IsCoinBase())
+        if (!tx.IsCoinBase())
         {
             nFees += view.GetValueIn(tx)-tx.GetValueOut();
 
             // ZERC BURN — vérifier uniquement après le fork
-            if (pindex->nHeight >= FORK_HEIGHT) {
+            //
+            // Historical consensus exception: during the mainnet FORK_HEIGHT
+            // transition window (heights 2435013-2435309), multiple miners'
+            // wallets had not yet updated to comply with this rule, and the
+            // majority of the network accepted their blocks and built upon
+            // them regardless. Rather than track each violating height
+            // individually, the whole known transition window is grandfathered
+            // in here (confirmed against the canonical chain via an independent
+            // full node and block explorer).
+            bool fKnownMissingBurnException = (pindex->nHeight >= 2435013 && pindex->nHeight <= 2435309);
+            if (pindex->nHeight >= FORK_HEIGHT && !fKnownMissingBurnException) {
                 CScript burnScript = GetBurnScript(chainparams);
                 CAmount nActualBurn = 0;
                 for (const CTxOut& txout : tx.vout) {
@@ -3141,7 +3162,17 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime1 - nTimeStart), 0.001 * (nTime1 - nTimeStart) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime1 - nTimeStart) / (nInputs-1), nTimeConnect * 0.000001);
 
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
-    if (block.vtx[0].GetValueOut() > blockReward)
+    // Historical consensus exception: mainnet block 2435029
+    // (0003800a99804333606106440f9f5716788bd65c79a200760c891d87b1fbb88c) paid an
+    // excess coinbase (10 ZERC instead of the 6 ZERC post-FORK_HEIGHT limit). This
+    // block was already accepted by the majority of the network and built upon with
+    // otherwise-correct subsidies, so it is grandfathered in here (analogous to
+    // Bitcoin Core's historical BIP30 duplicate-coinbase exceptions) rather than
+    // permanently forking this node off the canonical chain.
+    bool fKnownExcessCoinbaseException =
+        (chainparams.NetworkIDString() == "main" && pindex->nHeight == 2435029 &&
+         block.GetHash() == uint256S("0003800a99804333606106440f9f5716788bd65c79a200760c891d87b1fbb88c"));
+    if (block.vtx[0].GetValueOut() > blockReward && !fKnownExcessCoinbaseException)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
                                block.vtx[0].GetValueOut(), blockReward),
@@ -5898,6 +5929,19 @@ bool static ProcessMessage(const CChainParams& chainparams, CNode* pfrom, string
             vRecv >> LIMITED_STRING(strSubVer, MAX_SUBVERSION_LENGTH);
             cleanSubVer = SanitizeString(strSubVer, SAFE_CHARS_SUBVERSION);
         }
+
+        // Refuse and ban peers advertising the "Aikawarazu" client, which has been
+        // observed serving a stale/rule-violating fork of the chain.
+        if (cleanSubVer.find("Aikawarazu") != std::string::npos)
+        {
+            LogPrintf("peer=%d using banned client subversion '%s'; disconnecting\n", pfrom->id, cleanSubVer);
+            pfrom->PushMessage("reject", strCommand, REJECT_OBSOLETE, string("Client not allowed"));
+            LOCK(cs_main);
+            Misbehaving(pfrom->GetId(), 100);
+            pfrom->fDisconnect = true;
+            return false;
+        }
+
         if (!vRecv.empty()) {
             int nStartingHeight;
             vRecv >> nStartingHeight;

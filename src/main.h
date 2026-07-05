@@ -60,7 +60,10 @@ struct CNodeStateStats;
 static const bool DEFAULT_ALERTS = true;
 /** Maximum reorg length we will accept before we shut down and alert the user. */
 // static const unsigned int MAX_REORG_LENGTH = COINBASE_MATURITY - 1;
-static const unsigned int MAX_REORG_LENGTH = 100 - 1;
+// Temporarily raised to recover from a known stale fork at mainnet height 2435013
+// (231+ blocks deep as of 2026-07-05); revert to 100 - 1 once resynced with the
+// canonical chain.
+static const unsigned int MAX_REORG_LENGTH = 500 - 1;
 /** Default for DEFAULT_WHITELISTRELAY. */
 static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for DEFAULT_WHITELISTFORCERELAY. */
