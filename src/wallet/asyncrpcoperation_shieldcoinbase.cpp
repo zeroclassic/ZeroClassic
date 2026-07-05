@@ -195,11 +195,14 @@ bool AsyncRPCOperation_shieldcoinbase::main_impl() {
             FormatMoney(targetAmount), FormatMoney(minersFee)));
     }
 
-    CAmount sendAmount = targetAmount - minersFee;
-    LogPrint("zrpc", "%s: spending %s to shield %s with fee %s\n",
-            getId(), FormatMoney(targetAmount), FormatMoney(sendAmount), FormatMoney(minersFee));
+    int nextBlockHeight = chainActive.Height() + 1;
+    CAmount burnAmount = (nextBlockHeight >= FORK_HEIGHT) ? (targetAmount - minersFee) / BURN_RATE_PERCENT : 0;
+    CAmount sendAmount = targetAmount - minersFee - burnAmount;
 
-    return std::visit(ShieldToAddress(this, sendAmount), tozaddr_);
+    LogPrint("zrpc", "%s: spending %s to shield %s with fee %s and burn %s\n",
+            getId(), FormatMoney(targetAmount), FormatMoney(sendAmount), FormatMoney(minersFee), FormatMoney(burnAmount));
+
+    return std::visit(ShieldToAddress(this, sendAmount, burnAmount), tozaddr_);
 }
 
 bool ShieldToAddress::operator()(const libzcash::SproutPaymentAddress &zaddr) const {
@@ -208,6 +211,9 @@ bool ShieldToAddress::operator()(const libzcash::SproutPaymentAddress &zaddr) co
     for (ShieldCoinbaseUTXO & t : m_op->inputs_) {
         CTxIn in(COutPoint(t.txid, t.vout));
         rawTx.vin.push_back(in);
+    }
+    if (burnAmount > 0) {
+        rawTx.vout.push_back(CTxOut(burnAmount, GetBurnScript(Params())));
     }
     m_op->tx_ = CTransaction(rawTx);
 
@@ -245,6 +251,12 @@ bool ShieldToAddress::operator()(const libzcash::SaplingPaymentAddress &zaddr) c
     // Add transparent inputs
     for (auto t : m_op->inputs_) {
         m_op->builder_.AddTransparentInput(COutPoint(t.txid, t.vout), t.scriptPubKey, t.amount);
+    }
+
+    if (burnAmount > 0) {
+        KeyIO keyIO(Params());
+        CTxDestination burnDest = keyIO.DecodeDestination(BURN_ADDRESS);
+        m_op->builder_.AddTransparentOutput(burnDest, burnAmount);
     }
 
     // Send all value to the target z-addr

@@ -99,9 +99,10 @@ class ShieldToAddress
 private:
     AsyncRPCOperation_shieldcoinbase *m_op;
     CAmount sendAmount;
+    CAmount burnAmount;
 public:
-    ShieldToAddress(AsyncRPCOperation_shieldcoinbase *op, CAmount sendAmount) :
-        m_op(op), sendAmount(sendAmount) {}
+    ShieldToAddress(AsyncRPCOperation_shieldcoinbase *op, CAmount sendAmount, CAmount burnAmount) :
+        m_op(op), sendAmount(sendAmount), burnAmount(burnAmount) {}
 
     bool operator()(const libzcash::SproutPaymentAddress &zaddr) const;
     bool operator()(const libzcash::SaplingPaymentAddress &zaddr) const;
@@ -141,4 +142,3 @@ public:
 
 
 #endif // ZCASH_WALLET_ASYNCRPCOPERATION_SHIELDCOINBASE_H
-
