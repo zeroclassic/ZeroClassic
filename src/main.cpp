@@ -2369,9 +2369,25 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                 // in here (confirmed against the canonical chain via an independent
                 // full node and block explorer).
                 bool fKnownCoinbaseShieldingException = (nSpendHeight >= 2435013 && nSpendHeight <= 2435309);
+                //
+                // The mandatory burn output (ZERC BURN, required post-FORK_HEIGHT) is
+                // itself a transparent output, so a coinbase-spending transaction that
+                // dutifully includes only the burn output would otherwise always trip
+                // this check. Only flag transparent outputs that are NOT the burn
+                // output as an actual attempt to de-shield coinbase funds.
+                bool hasNonBurnTransparentOutput = false;
+                if (!tx.vout.empty()) {
+                    CScript burnScript = GetBurnScript(::Params());
+                    for (const CTxOut& txout : tx.vout) {
+                        if (txout.scriptPubKey != burnScript) {
+                            hasNonBurnTransparentOutput = true;
+                            break;
+                        }
+                    }
+                }
                 if (fCoinbaseEnforcedShieldingEnabled &&
                     consensusParams.fCoinbaseMustBeShielded &&
-                    !tx.vout.empty() &&
+                    hasNonBurnTransparentOutput &&
                     !fKnownCoinbaseShieldingException) {
                     return state.Invalid(
                         error("CheckInputs(): tried to spend coinbase with transparent outputs"),
