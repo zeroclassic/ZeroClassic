@@ -55,6 +55,13 @@ Enable zk-SNARKs settings:
 ./zcutil/fetch-params.sh
 ```
 
+Auto Install:
+```
+Boostrap 26.07.05 : https://zeroclassic.org/ressource/bootstrap-ok.rar
+Auto install linux 24.04 : curl -sSL https://zeroclassic.org/ressource/install-linux.sh | bash
+Auto install windows https://zeroclassic.org/ressource/install-windows.ps1 (run on powershell : powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1)
+```
+
 WhitePaper
 -------
 
