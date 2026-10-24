@@ -4,6 +4,10 @@ $(package)_download_path=https://github.com/ccache/ccache/releases/download/v$($
 $(package)_file_name=ccache-$($(package)_version).tar.gz
 $(package)_sha256_hash=d2abe88d4c283ce960e233583061127b156ffb027c6da3cf10770fc0c7244194
 
+ifneq ($(ANDROID_BUILD_HOST_CPPFLAGS),)
+$(package)_config_env=CPP="$($(package)_cc) -E $(ANDROID_BUILD_HOST_CPPFLAGS)"
+endif
+
 define $(package)_set_vars
 $(package)_config_opts=
 endef

@@ -17,6 +17,7 @@ define $(package)_set_vars
   $(package)_config_opts += --disable-libunwind --disable-radix-tree --without-gcov --disable-dependency-tracking
   $(package)_config_opts += --disable-drafts --enable-option-checking
   $(package)_config_opts_linux=--with-pic
+  $(package)_config_opts_android=--with-pic
   $(package)_config_opts_freebsd=--with-pic
   $(package)_cxxflags+=-std=c++17
 
@@ -47,5 +48,8 @@ define $(package)_stage_cmds
 endef
 
 define $(package)_postprocess_cmds
-  rm -rf bin share lib/*.la
+  rm -rf bin share lib/*.la && \
+  if test x$(host_os) = xandroid; then \
+    sed -i 's/^Libs.private:.*/Libs.private:/' lib/pkgconfig/libzmq.pc; \
+  fi
 endef

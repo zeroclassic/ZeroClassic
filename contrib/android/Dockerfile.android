@@ -1,0 +1,52 @@
+
+FROM debian:bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ANDROID_API_LEVEL=24
+ENV ANDROID_NDK_HOME=/opt/android-ndk
+ENV ANDROID_NDK_ROOT=/opt/android-ndk
+ENV ANDROID_NDK_VERSION=25.2.9519653
+ENV JOBS=4
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    autoconf \
+    automake \
+    binutils \
+    bison \
+    build-essential \
+    bsdextrautils \
+    ca-certificates \
+    cmake \
+    curl \
+    file \
+    flex \
+    git \
+    lbzip2 \
+    libtool \
+    make \
+    patch \
+    perl \
+    pkg-config \
+    python3 \
+    python3-pip \
+    rsync \
+    sed \
+    tar \
+    unzip \
+    wget \
+    xz-utils \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL \
+    https://dl.google.com/android/repository/android-ndk-r25c-linux.zip \
+    -o /tmp/android-ndk.zip \
+    && unzip -q /tmp/android-ndk.zip -d /opt \
+    && mv /opt/android-ndk-r25c "${ANDROID_NDK_HOME}" \
+    && rm /tmp/android-ndk.zip
+
+ENV PATH="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin:${PATH}"
+
+WORKDIR /work
+
+CMD ["bash"]

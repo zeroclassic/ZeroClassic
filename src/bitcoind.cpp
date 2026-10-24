@@ -206,7 +206,7 @@ bool AppInit(int argc, char* argv[])
 #ifdef ZCASH_FUZZ
 #warning BUILDING A FUZZER, NOT THE REAL MAIN
 #include "fuzz.cpp"
-#else
+#elif !defined(ZEROD_JNI_LIBRARY)
 int main(int argc, char* argv[])
 {
     SetupEnvironment();
