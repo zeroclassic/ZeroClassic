@@ -559,6 +559,16 @@ case $host in
    *android*)
      dnl make sure android stays above linux for hosts like *linux-android*
      TARGET_OS=android
+    AC_MSG_CHECKING([for Android API level 24 or newer])
+     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+       #ifndef __ANDROID_API__
+       #error Android NDK compiler required
+      #elif __ANDROID_API__ < 24
+      #error ZeroClassic Android requires API level 24 or newer
+       #endif
+     ]], [[]])],
+       [AC_MSG_RESULT([yes])],
+      [AC_MSG_ERROR([ZeroClassic Android builds require an NDK compiler targeting API level 24 or newer])])
      ;;
    *linux*)
      TARGET_OS=linux
@@ -1099,6 +1109,7 @@ if test x$build_bitcoin_utils$build_bitcoin_libs$build_bitcoind$use_tests = xnon
 fi
 
 AM_CONDITIONAL([TARGET_DARWIN], [test x$TARGET_OS = xdarwin])
+AM_CONDITIONAL([TARGET_ANDROID], [test x$TARGET_OS = xandroid])
 AM_CONDITIONAL([BUILD_DARWIN], [test x$BUILD_OS = xdarwin])
 AM_CONDITIONAL([TARGET_WINDOWS], [test x$TARGET_OS = xwindows])
 AM_CONDITIONAL([ENABLE_WALLET],[test x$enable_wallet = xyes])

@@ -17,6 +17,7 @@ $(package)_config_opts_debug=variant=debug
 $(package)_config_opts=--layout=system --user-config=user-config.jam
 $(package)_config_opts+=threading=multi link=static -sNO_COMPRESSION=1
 $(package)_config_opts_linux=target-os=linux threadapi=pthread runtime-link=shared
+$(package)_config_opts_android=target-os=linux threadapi=pthread runtime-link=shared
 $(package)_config_opts_freebsd=cxxflags=-fPIC
 $(package)_config_opts_darwin=target-os=darwin runtime-link=shared
 $(package)_config_opts_mingw32=target-os=windows binary-format=pe threadapi=win32 runtime-link=static
@@ -30,10 +31,12 @@ ifneq ($(ZERC_TOOLCHAIN), GCC)
 else
   $(package)_toolset_$(host_os)=gcc
 endif
+$(package)_toolset_android=clang
 
 $(package)_config_libraries=chrono,filesystem,program_options,system,thread,test
 $(package)_cxxflags+=-std=c++17 -fvisibility=hidden
 $(package)_cxxflags_linux=-fPIC
+$(package)_cxxflags_android=-fPIC
 $(package)_cxxflags_freebsd=-fPIC
 
 ifneq ($(ZERC_TOOLCHAIN), GCC)

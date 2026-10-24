@@ -19,12 +19,16 @@ $(package)_sha256_hash_aarch64_linux=26745b57500da293a8147122a5998926301350a610c
 # "darwin", in which case we assume x86_64-apple-darwin.
 $(package)_rust_target_x86_64-pc-linux-gnu=x86_64-unknown-linux-gnu
 $(package)_rust_target_x86_64-w64-mingw32=x86_64-pc-windows-gnu
+$(package)_rust_target_aarch64-unknown-linux-android=aarch64-linux-android
+$(package)_rust_target_x86_64-pc-linux-android=x86_64-linux-android
 
 # Mapping from Rust targets to SHA-256 hashes
 $(package)_rust_std_sha256_hash_aarch64-unknown-linux-gnu=4afce4152945642fb4c1a7fa44ffe396f98ce094108ffe29b1833413e8eed49d
 $(package)_rust_std_sha256_hash_x86_64-apple-darwin=a8653b57d0efbccf3e95953cfb9c7a2ddaa68ba789edc8378c5b0b8200cc3be5
 $(package)_rust_std_sha256_hash_x86_64-pc-windows-gnu=aa6486ea84917e58dd87ea72a40175f717271024372482871a58c72089ff1e5d
 $(package)_rust_std_sha256_hash_x86_64-unknown-freebsd=9f8e178831660036f918376a84c7e98f53a3fa5ed2a297a9b56f805774968d7a
+$(package)_rust_std_sha256_hash_aarch64-linux-android=99bf807bc6e3e6977e542cb5acc73451db94f593f72b23ddd9288030a5e80620
+$(package)_rust_std_sha256_hash_x86_64-linux-android=1c30a10348489ddc81de6f59623ed1215f7879c39e2316971ddf3e58852c601f
 
 define rust_target
 $(if $($(1)_rust_target_$(2)),$($(1)_rust_target_$(2)),$(if $(findstring darwin,$(3)),x86_64-apple-darwin,$(if $(findstring freebsd,$(3)),x86_64-unknown-freebsd,$(2))))

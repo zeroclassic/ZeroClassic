@@ -487,6 +487,15 @@ zerod_SOURCES = bitcoind.cpp
 zerod_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 zerod_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 zerod_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+if TARGET_ANDROID
+zerod_LDFLAGS += -static-libstdc++
+libzerod_la_SOURCES = jni.cpp bitcoind.cpp
+libzerod_la_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) -DZEROD_JNI_LIBRARY
+libzerod_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS)
+libzerod_la_LDFLAGS = $(AM_LDFLAGS) -module -avoid-version -static-libstdc++
+libzerod_la_LIBADD = $(zerod_LDADD)
+lib_LTLIBRARIES += libzerod.la
+endif
 
 if TARGET_WINDOWS
 zerod_SOURCES += bitcoind-res.rc

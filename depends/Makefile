@@ -36,7 +36,7 @@ FALLBACK_DOWNLOAD_PATH ?= https://download.z.cash/depends-sources
 
 BUILD ?= $(shell ./config.guess)
 HOST ?= $(BUILD)
-PATCHES_PATH = $(BASEDIR)/patches
+PATCHES_PATH = $(CURDIR)/patches
 BASEDIR = $(CURDIR)
 HASH_LENGTH:=11
 DOWNLOAD_CONNECT_TIMEOUT:=10
@@ -75,7 +75,10 @@ endif
 host_arch=$(firstword $(subst -, ,$(canonical_host)))
 host_vendor=$(word 2,$(subst -, ,$(canonical_host)))
 full_host_os:=$(subst $(host_arch)-$(host_vendor)-,,$(canonical_host))
+host_os:=$(findstring android,$(full_host_os))
+ifeq ($(host_os),)
 host_os:=$(findstring linux,$(full_host_os))
+endif
 host_os+=$(findstring darwin,$(full_host_os))
 host_os+=$(findstring freebsd,$(full_host_os))
 host_os+=$(findstring mingw32,$(full_host_os))
@@ -131,7 +134,7 @@ $(host_prefix)/.stamp_$(final_build_id): $(native_packages) $(packages)
 	then echo Extracting pre-vendored crates from $(CRATE_ARCHIVE)...; \
 		tar xf $(CRATE_ARCHIVE) -C $(@D); \
 	else echo Vendoring crates...; \
-		$(@D)/native/bin/cargo vendor --locked --manifest-path $(BASEDIR)/../Cargo.toml $(@D)/$(CRATE_REGISTRY); \
+		$(@D)/native/bin/cargo vendor --locked --manifest-path $(CURDIR)/../Cargo.toml $(@D)/$(CRATE_REGISTRY); \
 	fi
 	$(AT)touch $@
 
@@ -194,7 +197,7 @@ download-crates: native_rust
 	$(AT)rm -rf $(crates_download_dir)
 	$(AT)mkdir -p $(crates_download_dir)
 	$(AT)tar xf $(native_rust_cached) -C $(crates_download_dir)
-	$(AT)$(crates_download_dir)/native/bin/cargo vendor --locked --manifest-path $(BASEDIR)/../Cargo.toml $(crates_download_dir)/$(CRATE_REGISTRY)
+	$(AT)$(crates_download_dir)/native/bin/cargo vendor --locked --manifest-path $(CURDIR)/../Cargo.toml $(crates_download_dir)/$(CRATE_REGISTRY)
 	$(AT)cd $(crates_download_dir); find $(CRATE_REGISTRY) | sort | tar --no-recursion -czf $(CRATE_ARCHIVE) -T -
 	$(AT)rm -rf $(crates_download_dir)
 

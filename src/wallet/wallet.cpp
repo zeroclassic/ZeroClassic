@@ -38,7 +38,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/thread.hpp>
 
-#ifdef __linux__ //linux only
+#if defined(__linux__) && !defined(__ANDROID__)
 #include <malloc.h>
 #endif
 
@@ -3885,7 +3885,7 @@ unsigned int CWallet::DeleteTransactions(std::vector<uint256> &removeTxs, std::v
     }
 
     // release memory as soon as possible
-    #ifdef __linux__
+    #if defined(__linux__) && !defined(__ANDROID__)
     malloc_trim(0);
     #endif
 

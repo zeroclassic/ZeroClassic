@@ -15,6 +15,7 @@ define $(package)_set_vars
 $(package)_config_opts=--disable-shared --enable-cxx --disable-replication --enable-option-checking
 $(package)_config_opts_mingw32=--enable-mingw
 $(package)_config_opts_linux=--with-pic
+$(package)_config_opts_android=--with-pic
 $(package)_config_opts_freebsd=--with-pic
 ifneq ($(build_os),darwin)
   $(package)_config_opts_darwin=--disable-atomicsupport
@@ -48,12 +49,20 @@ define $(package)_build_cmds
   $(MAKE) libdb_cxx-6.2.a libdb-6.2.a
 endef
 
+ifeq ($(host_os),android)
+define $(package)_stage_cmds
+  $(MAKE) DESTDIR=$($(package)_staging_dir) install_include install_lib
+endef
+else
 define $(package)_stage_cmds
   $(MAKE) DESTDIR=$($(package)_staging_dir) install
 endef
+endif
 
+ifneq ($(host_os),android)
 define $(package)_postprocess_cmds
   cd $(BASEDIR)/../zcutil && \
   mkdir -p bin && \
   mv -f $($(package)_staging_dir)$(host_prefix)/bin/db_* bin
 endef
+endif

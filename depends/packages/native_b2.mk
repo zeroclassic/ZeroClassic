@@ -12,7 +12,7 @@ else
 endif
 
 define $(package)_build_cmds
-  CXX="$($(package)_cxx)" CXXFLAGS="$($(package)_cxxflags)" ./build.sh "$($(package)_toolset_$(host_os))"
+  ./build.sh --cxx="$($(package)_cxx)" --cxxflags="$($(package)_cxxflags)" "$($(package)_toolset_$(host_os))"
 endef
 
 define $(package)_stage_cmds
